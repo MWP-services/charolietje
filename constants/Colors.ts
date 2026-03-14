@@ -1,19 +1,27 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
-
-export default {
-  light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
-  },
+export const colors = {
+  background: '#F3FBF8',
+  backgroundAlt: '#ECF8F5',
+  surface: '#FFFFFF',
+  surfaceMuted: '#F8FCFA',
+  surfaceAccent: '#E8FBF6',
+  primary: '#18B67A',
+  primaryDark: '#0E8C5D',
+  primarySoft: '#D8F7EA',
+  secondary: '#0E7490',
+  secondarySoft: '#D9F2F8',
+  text: '#102A24',
+  textSecondary: '#5E736D',
+  textMuted: '#7D928B',
+  border: '#D9E8E1',
+  shadow: 'rgba(16, 42, 36, 0.08)',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  danger: '#E85D75',
+  info: '#2563EB',
+  overlay: 'rgba(10, 27, 23, 0.42)',
+  gradientStart: '#E8FFF4',
+  gradientMiddle: '#F5FFFD',
+  gradientEnd: '#EAF7FF',
 };
+
+export const chartColors = ['#18B67A', '#0E7490', '#F59E0B', '#2563EB', '#E85D75'];
