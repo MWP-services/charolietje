@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "charolietje",
-    "slug": "charolietje",
+    "name": "NutriVoice",
+    "slug": "nutrivoice",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "charolietje",
-    "userInterfaceStyle": "automatic",
+    "scheme": "nutrivoice",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",

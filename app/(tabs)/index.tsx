@@ -16,6 +16,7 @@ import { PremiumUpsellCard } from '@/components/premium/PremiumUpsellCard';
 import { colors } from '@/constants/colors';
 import { useDailyTotals } from '@/hooks/useDailyTotals';
 import { useMeals } from '@/hooks/useMeals';
+import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
 import { getTodayIsoDate, getLastNDates } from '@/utils/date';
 import { formatCalories } from '@/utils/formatting';
@@ -40,6 +41,7 @@ const getStreak = (dates: string[]) => {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const setDraftText = useMealStore((state) => state.setDraftText);
   const profile = useProfileStore((state) => state.profile);
   const totals = useDailyTotals();
   const todayMeals = useMeals(getTodayIsoDate());
@@ -65,11 +67,30 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      <PrimaryButton
-        icon={<Ionicons color={colors.surface} name="mic" size={18} />}
-        label="Log meal with voice"
-        onPress={() => router.push('/meal/log')}
-      />
+      <View style={{ gap: 12 }}>
+        <PrimaryButton
+          icon={<Ionicons color={colors.surface} name="mic" size={18} />}
+          label="Log meal with voice"
+          onPress={() => router.push('/meal/log')}
+        />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setDraftText('I had ');
+            router.push('/meal/log?mode=typed');
+          }}
+          style={{
+            minHeight: 52,
+            borderRadius: 999,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>Quick add typed meal</Text>
+        </Pressable>
+      </View>
 
       <StreakCard days={streak} />
 
@@ -81,6 +102,16 @@ export default function DashboardScreen() {
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <NutrientStatCard accent="#F59E0B" label="Carbs" value={`${Math.round(totals.carbs)} g`} />
         <NutrientStatCard accent="#E85D75" label="Fat" value={`${Math.round(totals.fat)} g`} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <NutrientStatCard accent="#8B5CF6" label="Fiber" value={`${Math.round(totals.fiber)} g`} />
+        <NutrientStatCard accent="#F97316" label="Sugar" value={`${Math.round(totals.sugar)} g`} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <NutrientStatCard accent="#2563EB" label="Sodium" value={`${Math.round(totals.sodium)} mg`} />
+        <NutrientStatCard accent="#0F766E" label="Meals today" value={String(todayMeals.length)} />
       </View>
 
       <InsightBanner

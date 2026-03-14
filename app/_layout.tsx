@@ -1,6 +1,6 @@
 import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
 import { useFonts, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
-import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';

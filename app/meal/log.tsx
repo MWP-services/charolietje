@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
@@ -18,6 +18,7 @@ import { useMealStore } from '@/store/mealStore';
 
 export default function VoiceLogMealScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft } = useMealStore();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [seconds, setSeconds] = useState(0);
@@ -31,6 +32,8 @@ export default function VoiceLogMealScreen() {
       }
     };
   }, []);
+
+  const isTypedMode = mode === 'typed';
 
   const startRecording = async () => {
     try {
@@ -100,10 +103,14 @@ export default function VoiceLogMealScreen() {
       <Card style={{ alignItems: 'center', gap: 18 }}>
         <MicButton isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
         <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
-          {recording ? 'Recording now...' : 'Tap the mic to start'}
+          {recording ? 'Recording now...' : isTypedMode ? 'Type your meal below' : 'Tap the mic to start'}
         </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: 'Manrope_500Medium' }}>
-          {recording ? `${seconds}s captured` : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
+        <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
+          {recording
+            ? `${seconds}s captured`
+            : isTypedMode
+              ? 'Quick-add mode skips recording and takes you straight into editable meal text.'
+              : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
         </Text>
       </Card>
 
@@ -124,7 +131,18 @@ export default function VoiceLogMealScreen() {
       </Card>
 
       <PrimaryButton label={isTranscribing ? 'Transcribing...' : isAnalyzing ? 'Analyzing meal...' : 'Analyze meal'} loading={isTranscribing || isAnalyzing} onPress={onAnalyze} />
-      <SecondaryButton label="Type meal instead" onPress={() => {}} disabled={Boolean(recording)} />
+      <SecondaryButton
+        label={isTypedMode ? 'Switch to voice flow' : 'Use typed entry'}
+        onPress={() => {
+          if (isTypedMode) {
+            router.replace('/meal/log');
+            return;
+          }
+          setDraftText(draftText || 'I had ');
+          router.replace('/meal/log?mode=typed');
+        }}
+        disabled={Boolean(recording)}
+      />
     </ScreenContainer>
   );
 }

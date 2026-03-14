@@ -1,7 +1,9 @@
 import { ScrollView, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { colors } from '@/constants/colors';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 type ScreenContainerProps = {
   children: React.ReactNode;
@@ -10,6 +12,8 @@ type ScreenContainerProps = {
 };
 
 export const ScreenContainer = ({ children, scroll = true, contentStyle }: ScreenContainerProps) => {
+  const { isConnected, isChecking } = useNetworkStatus();
+
   if (scroll) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -25,6 +29,7 @@ export const ScreenContainer = ({ children, scroll = true, contentStyle }: Scree
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
+          {!isChecking && !isConnected ? <OfflineBanner /> : null}
           {children}
         </ScrollView>
       </SafeAreaView>
@@ -43,6 +48,7 @@ export const ScreenContainer = ({ children, scroll = true, contentStyle }: Scree
           },
           contentStyle,
         ]}>
+        {!isChecking && !isConnected ? <OfflineBanner /> : null}
         {children}
       </View>
     </SafeAreaView>

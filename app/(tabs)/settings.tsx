@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Text, View } from 'react-native';
+import { z } from 'zod';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
@@ -14,11 +15,7 @@ import { useProfileStore } from '@/store/profileStore';
 import type { GoalType } from '@/types/profile';
 import { settingsSchema } from '@/utils/validation';
 
-type SettingsValues = {
-  fullName: string;
-  calorieTarget: string;
-  proteinTarget: string;
-};
+type SettingsValues = z.input<typeof settingsSchema>;
 
 export default function ProfileSettingsScreen() {
   const { signOut } = useAuthStore();
@@ -71,14 +68,14 @@ export default function ProfileSettingsScreen() {
           control={control}
           name="calorieTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} value={value} />
+            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="proteinTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} value={value} />
+            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} value={value ?? ''} />
           )}
         />
         <PrimaryButton label="Save settings" loading={isSubmitting} onPress={onSubmit} />

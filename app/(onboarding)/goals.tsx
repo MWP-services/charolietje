@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Text, View } from 'react-native';
+import { z } from 'zod';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
@@ -11,17 +12,9 @@ import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { GoalSelector } from '@/components/settings/GoalSelector';
 import { colors } from '@/constants/colors';
 import { useProfileStore } from '@/store/profileStore';
-import type { GoalType } from '@/types/profile';
 import { goalsSchema } from '@/utils/validation';
 
-type GoalsValues = {
-  goal: GoalType;
-  calorieTarget: string;
-  proteinTarget: string;
-  age: string;
-  weight: string;
-  height: string;
-};
+type GoalsValues = z.input<typeof goalsSchema>;
 
 export default function OnboardingGoalsScreen() {
   const router = useRouter();
@@ -78,14 +71,14 @@ export default function OnboardingGoalsScreen() {
           control={control}
           name="calorieTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} placeholder="2600" value={value} />
+            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} placeholder="2600" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="proteinTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} placeholder="180" value={value} />
+            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} placeholder="180" value={value ?? ''} />
           )}
         />
       </Card>
@@ -96,21 +89,21 @@ export default function OnboardingGoalsScreen() {
           control={control}
           name="age"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.age?.message} keyboardType="numeric" label="Age" onChangeText={onChange} placeholder="31" value={value} />
+            <FormField error={errors.age?.message} keyboardType="numeric" label="Age" onChangeText={onChange} placeholder="31" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="weight"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.weight?.message} keyboardType="numeric" label="Weight (kg)" onChangeText={onChange} placeholder="78" value={value} />
+            <FormField error={errors.weight?.message} keyboardType="numeric" label="Weight (kg)" onChangeText={onChange} placeholder="78" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="height"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.height?.message} keyboardType="numeric" label="Height (cm)" onChangeText={onChange} placeholder="182" value={value} />
+            <FormField error={errors.height?.message} keyboardType="numeric" label="Height (cm)" onChangeText={onChange} placeholder="182" value={value ?? ''} />
           )}
         />
       </Card>
