@@ -1,0 +1,130 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
+
+import { AppHeader } from '@/components/common/AppHeader';
+import { Card } from '@/components/common/Card';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
+import { ScreenContainer } from '@/components/common/ScreenContainer';
+import { SecondaryButton } from '@/components/common/SecondaryButton';
+import { MicButton } from '@/components/meal/MicButton';
+import { TranscriptionEditor } from '@/components/meal/TranscriptionEditor';
+import { colors } from '@/constants/colors';
+import { aiService } from '@/services/ai/aiService';
+import { useMealStore } from '@/store/mealStore';
+
+export default function VoiceLogMealScreen() {
+  const router = useRouter();
+  const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft } = useMealStore();
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Microphone permission', 'NutriVoice needs microphone access to record your meal.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const nextRecording = new Audio.Recording();
+      await nextRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await nextRecording.startAsync();
+      setRecording(nextRecording);
+      setSeconds(0);
+      timerRef.current = setInterval(() => {
+        setSeconds((value) => value + 1);
+      }, 1000);
+    } catch (error) {
+      Alert.alert('Recording error', error instanceof Error ? error.message : 'Could not start recording.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) {
+      return;
+    }
+
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      if (!uri) {
+        return;
+      }
+      setIsTranscribing(true);
+      const transcription = await aiService.transcribeAudio(uri);
+      setDraftText(transcription);
+    } catch (error) {
+      Alert.alert('Transcription error', error instanceof Error ? error.message : 'Could not transcribe recording.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const onAnalyze = async () => {
+    try {
+      await analyzeDraft();
+      router.push('/meal/result');
+    } catch (error) {
+      Alert.alert('Analysis failed', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
+
+  return (
+    <ScreenContainer>
+      <AppHeader actionLabel="Reset" onActionPress={clearDraft} showBackButton subtitle="Speak naturally. You can edit everything before saving." title="Log a meal" />
+      <Card style={{ alignItems: 'center', gap: 18 }}>
+        <MicButton isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
+        <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
+          {recording ? 'Recording now...' : 'Tap the mic to start'}
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: 'Manrope_500Medium' }}>
+          {recording ? `${seconds}s captured` : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
+        </Text>
+      </Card>
+
+      <TranscriptionEditor onChangeText={setDraftText} value={draftText} />
+
+      <Card style={{ gap: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Helpful examples</Text>
+        {[
+          'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
+          'For lunch I had a chicken sandwich and an apple.',
+          'Dinner was rice with salmon and vegetables.',
+        ].map((example) => (
+          <View key={example} style={{ flexDirection: 'row', gap: 10 }}>
+            <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
+            <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium', flex: 1 }}>{example}</Text>
+          </View>
+        ))}
+      </Card>
+
+      <PrimaryButton label={isTranscribing ? 'Transcribing...' : isAnalyzing ? 'Analyzing meal...' : 'Analyze meal'} loading={isTranscribing || isAnalyzing} onPress={onAnalyze} />
+      <SecondaryButton label="Type meal instead" onPress={() => {}} disabled={Boolean(recording)} />
+    </ScreenContainer>
+  );
+}
