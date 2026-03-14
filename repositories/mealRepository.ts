@@ -51,13 +51,17 @@ export const mealRepository = {
       const { items, ...mealRecord } = meal;
       const { error: mealError } = await supabase.from('meals').upsert(mealRecord);
       if (mealError) {
-        throw mealError;
+        throw new Error(mealError.message);
       }
 
-      await supabase.from('meal_items').delete().eq('meal_id', meal.id);
+      const { error: deleteItemsError } = await supabase.from('meal_items').delete().eq('meal_id', meal.id);
+      if (deleteItemsError) {
+        throw new Error(deleteItemsError.message);
+      }
+
       const { error: itemsError } = await supabase.from('meal_items').insert(items);
       if (itemsError) {
-        throw itemsError;
+        throw new Error(itemsError.message);
       }
 
       return meal;

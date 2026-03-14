@@ -26,6 +26,7 @@ export default function VoiceLogMealScreen() {
   const [seconds, setSeconds] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [lastAudioUri, setLastAudioUri] = useState<string | null>(null);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -84,10 +85,13 @@ export default function VoiceLogMealScreen() {
       setLastAudioUri(uri);
       setIsTranscribing(true);
       clearError();
+      setTranscriptionError(null);
       const transcription = await aiService.transcribeAudio(uri);
       setDraftText(transcription);
     } catch (error) {
-      Alert.alert('Transcription error', error instanceof Error ? error.message : 'Could not transcribe recording.');
+      const message = error instanceof Error ? error.message : 'Could not transcribe recording.';
+      setTranscriptionError(message);
+      Alert.alert('Transcription error', message);
     } finally {
       setIsTranscribing(false);
     }
@@ -101,10 +105,13 @@ export default function VoiceLogMealScreen() {
     try {
       setIsTranscribing(true);
       clearError();
+      setTranscriptionError(null);
       const transcription = await aiService.transcribeAudio(lastAudioUri);
       setDraftText(transcription);
     } catch (error) {
-      Alert.alert('Transcription error', error instanceof Error ? error.message : 'Could not transcribe recording.');
+      const message = error instanceof Error ? error.message : 'Could not transcribe recording.';
+      setTranscriptionError(message);
+      Alert.alert('Transcription error', message);
     } finally {
       setIsTranscribing(false);
     }
@@ -137,6 +144,15 @@ export default function VoiceLogMealScreen() {
           </Text>
         </Card>
       </FadeInView>
+      {transcriptionError ? (
+        <InlineMessage
+          actionLabel={lastAudioUri ? 'Retry transcription' : 'Dismiss'}
+          description="This message comes directly from the transcription request, so it should help pinpoint auth or deployment issues."
+          onActionPress={lastAudioUri ? retryTranscription : () => setTranscriptionError(null)}
+          title={transcriptionError}
+          tone="error"
+        />
+      ) : null}
       {error ? (
         <InlineMessage
           actionLabel={lastAudioUri ? 'Retry transcription' : 'Dismiss'}

@@ -130,6 +130,13 @@ supabase functions deploy transcribe-audio
 supabase functions deploy parse-meal
 ```
 
+If you see `401 Unauthorized` / `Invalid JWT` from the edge function gateway, redeploy using the `supabase/config.toml` included in this project or run:
+
+```bash
+supabase functions deploy transcribe-audio --no-verify-jwt
+supabase functions deploy parse-meal --no-verify-jwt
+```
+
 6. Add the OpenAI secret to Supabase:
 
 ```bash
@@ -152,6 +159,7 @@ Real transcription is now routed like this:
 4. The transcript text is returned to the app for review and editing
 
 This keeps `OPENAI_API_KEY` off the mobile client, which is the production-safe approach for Expo apps.
+For this MVP, the edge functions are configured as public function proxies and do not require user JWT verification at the gateway.
 
 Relevant files:
 

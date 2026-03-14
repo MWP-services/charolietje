@@ -1,0 +1,5 @@
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.parse-meal]
+verify_jwt = false

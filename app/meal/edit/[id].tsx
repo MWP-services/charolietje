@@ -16,8 +16,9 @@ import { aiService } from '@/services/ai/aiService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
 import { useMealStore } from '@/store/mealStore';
 import type { MealItem, MealType } from '@/types/meal';
-import { createId } from '@/utils/id';
+import { createId, createUuid } from '@/utils/id';
 import { calculateMealTotals, toMealTotalsRecord } from '@/utils/nutrition';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function EditMealScreen() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function EditMealScreen() {
     setItems((current) => [
       ...current,
       {
-        id: createId('item'),
+        id: isSupabaseConfigured ? createUuid() : createId('item'),
         meal_id: meal.id,
         name: '',
         quantity: 1,
@@ -66,7 +67,7 @@ export default function EditMealScreen() {
       ...current,
       {
         ...item,
-        id: createId('item'),
+        id: isSupabaseConfigured ? createUuid() : createId('item'),
       },
     ]);
   };

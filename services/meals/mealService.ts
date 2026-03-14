@@ -1,7 +1,8 @@
 import { mealRepository } from '@/repositories/mealRepository';
 import type { AnalyzedMeal, MealWithItems } from '@/types/meal';
-import { createId } from '@/utils/id';
+import { createId, createUuid } from '@/utils/id';
 import { toMealTotalsRecord } from '@/utils/nutrition';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export const mealService = {
   listMeals: mealRepository.listMeals,
@@ -9,10 +10,10 @@ export const mealService = {
   deleteMeal: mealRepository.deleteMeal,
   async saveAnalyzedMeal(userId: string, transcriptionText: string, analysis: AnalyzedMeal) {
     const now = new Date().toISOString();
-    const mealId = createId('meal');
+    const mealId = isSupabaseConfigured ? createUuid() : createId('meal');
     const items = analysis.items.map((item) => ({
       ...item,
-      id: createId('item'),
+      id: isSupabaseConfigured ? createUuid() : createId('item'),
       meal_id: mealId,
     }));
 
