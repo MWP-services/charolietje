@@ -7,6 +7,8 @@ import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
+import { FadeInView } from '@/components/common/FadeInView';
+import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
@@ -19,10 +21,11 @@ import { useMealStore } from '@/store/mealStore';
 export default function VoiceLogMealScreen() {
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft } = useMealStore();
+  const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft, error, clearError } = useMealStore();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [lastAudioUri, setLastAudioUri] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -78,8 +81,27 @@ export default function VoiceLogMealScreen() {
       if (!uri) {
         return;
       }
+      setLastAudioUri(uri);
       setIsTranscribing(true);
+      clearError();
       const transcription = await aiService.transcribeAudio(uri);
+      setDraftText(transcription);
+    } catch (error) {
+      Alert.alert('Transcription error', error instanceof Error ? error.message : 'Could not transcribe recording.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const retryTranscription = async () => {
+    if (!lastAudioUri) {
+      return;
+    }
+
+    try {
+      setIsTranscribing(true);
+      clearError();
+      const transcription = await aiService.transcribeAudio(lastAudioUri);
       setDraftText(transcription);
     } catch (error) {
       Alert.alert('Transcription error', error instanceof Error ? error.message : 'Could not transcribe recording.');
@@ -100,19 +122,30 @@ export default function VoiceLogMealScreen() {
   return (
     <ScreenContainer>
       <AppHeader actionLabel="Reset" onActionPress={clearDraft} showBackButton subtitle="Speak naturally. You can edit everything before saving." title="Log a meal" />
-      <Card style={{ alignItems: 'center', gap: 18 }}>
-        <MicButton isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
-        <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
-          {recording ? 'Recording now...' : isTypedMode ? 'Type your meal below' : 'Tap the mic to start'}
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
-          {recording
-            ? `${seconds}s captured`
-            : isTypedMode
-              ? 'Quick-add mode skips recording and takes you straight into editable meal text.'
-              : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
-        </Text>
-      </Card>
+      <FadeInView delay={40}>
+        <Card style={{ alignItems: 'center', gap: 18 }}>
+          <MicButton isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
+          <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
+            {recording ? 'Recording now...' : isTypedMode ? 'Type your meal below' : 'Tap the mic to start'}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
+            {recording
+              ? `${seconds}s captured`
+              : isTypedMode
+                ? 'Quick-add mode skips recording and takes you straight into editable meal text.'
+                : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
+          </Text>
+        </Card>
+      </FadeInView>
+      {error ? (
+        <InlineMessage
+          actionLabel={lastAudioUri ? 'Retry transcription' : 'Dismiss'}
+          description="You can retry the last recording or edit the text manually and continue."
+          onActionPress={lastAudioUri ? retryTranscription : clearError}
+          title={error}
+          tone="error"
+        />
+      ) : null}
 
       <TranscriptionEditor onChangeText={setDraftText} value={draftText} />
 
@@ -130,7 +163,12 @@ export default function VoiceLogMealScreen() {
         ))}
       </Card>
 
-      <PrimaryButton label={isTranscribing ? 'Transcribing...' : isAnalyzing ? 'Analyzing meal...' : 'Analyze meal'} loading={isTranscribing || isAnalyzing} onPress={onAnalyze} />
+      <PrimaryButton
+        disabled={!draftText.trim()}
+        label={isTranscribing ? 'Transcribing...' : isAnalyzing ? 'Analyzing meal...' : 'Analyze meal'}
+        loading={isTranscribing || isAnalyzing}
+        onPress={onAnalyze}
+      />
       <SecondaryButton
         label={isTypedMode ? 'Switch to voice flow' : 'Use typed entry'}
         onPress={() => {

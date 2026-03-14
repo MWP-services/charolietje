@@ -13,6 +13,7 @@ type MealState = {
   draftText: string;
   draftAnalysis: AnalyzedMeal | null;
   lastSavedMealId: string | null;
+  clearError: () => void;
   loadMeals: (userId: string) => Promise<MealWithItems[]>;
   setDraftText: (text: string) => void;
   analyzeDraft: () => Promise<AnalyzedMeal>;
@@ -44,7 +45,7 @@ export const useMealStore = create<MealState>((set, get) => ({
     }
   },
   setDraftText(text) {
-    set({ draftText: text, draftAnalysis: null });
+    set({ draftText: text, draftAnalysis: null, error: null });
   },
   async analyzeDraft() {
     const text = get().draftText.trim();
@@ -65,6 +66,9 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
   clearDraft() {
     set({ draftText: '', draftAnalysis: null, error: null, lastSavedMealId: null });
+  },
+  clearError() {
+    set({ error: null });
   },
   async saveDraft(userId) {
     const { draftText, draftAnalysis, meals } = get();

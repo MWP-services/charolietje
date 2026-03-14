@@ -27,6 +27,32 @@ export const profileRepository = {
       if (data) {
         return data as UserProfile;
       }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const now = new Date().toISOString();
+      const createdProfile: UserProfile = {
+        ...buildSeedProfile(userId, email ?? user?.email ?? null),
+        id: userId,
+        full_name:
+          ((typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name) ||
+            (typeof user?.user_metadata?.name === 'string' && user.user_metadata.name) ||
+            email?.split('@')[0] ||
+            'NutriVoice User') as string,
+        email: email ?? user?.email ?? undefined,
+        is_premium: false,
+        has_completed_onboarding: false,
+        created_at: now,
+        updated_at: now,
+      };
+
+      const { data: inserted, error: insertError } = await supabase.from('profiles').upsert(createdProfile).select().single();
+      if (insertError) {
+        throw insertError;
+      }
+      return inserted as UserProfile;
     }
 
     return ensureMockProfile(userId, email);

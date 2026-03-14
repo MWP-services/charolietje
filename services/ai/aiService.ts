@@ -1,7 +1,10 @@
 import type { AnalyzedMeal, MealType, ParsedMeal, ParsedMealItem } from '@/types/meal';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { calculateMealTotals } from '@/utils/nutrition';
 
+import { parseMealTextWithOpenAI } from '@/services/ai/mealParsingService';
 import { getNutritionForItemsMock } from '@/services/nutrition/nutritionService';
+import { transcribeAudioWithOpenAI } from '@/services/ai/transcriptionService';
 
 const sampleTranscriptions = [
   'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
@@ -185,10 +188,22 @@ export const parseMealTextMock = async (text: string): Promise<ParsedMeal> => {
 
 // TODO: Plug in OpenAI transcription and parsing endpoints here.
 export const aiService = {
-  transcribeAudio: transcribeAudioMock,
-  parseMealText: parseMealTextMock,
+  async transcribeAudio(audioUri: string) {
+    if (!isSupabaseConfigured) {
+      return transcribeAudioMock(audioUri);
+    }
+
+    return transcribeAudioWithOpenAI(audioUri);
+  },
+  async parseMealText(text: string) {
+    if (!isSupabaseConfigured) {
+      return parseMealTextMock(text);
+    }
+
+    return parseMealTextWithOpenAI(text);
+  },
   async analyzeText(text: string): Promise<AnalyzedMeal> {
-    const parsed = await parseMealTextMock(text);
+    const parsed = await this.parseMealText(text);
     const items = await getNutritionForItemsMock(parsed.items);
     return {
       mealType: parsed.mealType,

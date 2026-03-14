@@ -22,13 +22,17 @@ The app runs in two modes:
 
 - Welcome, register, login, onboarding, dashboard, history, premium, settings
 - Protected routing with session restore
-- Voice meal logging flow with recording state and mock transcription
+- Voice meal logging flow with recording state and transcript review
+- Real OpenAI transcription path via Supabase Edge Function when configured
+- Real OpenAI meal parsing path via Supabase Edge Function when configured
 - Quick-add typed meal path alongside voice logging
 - Editable transcription before analysis
 - Mock AI meal parsing and nutrition enrichment
 - Daily totals for calories, protein, carbs, fat, fiber, sugar, and sodium
 - Meal detail, day detail, edit meal, delete meal
 - Premium coaching screen with goal-aware recommendations
+- Better inline errors and retry flows in key meal logging screens
+- Improved edit-meal flow with meal type selection, re-parse from text, and item duplication
 - Weekly overview scaffold and dashboard insight banner
 - Offline status banner scaffold for future sync-aware behavior
 - Premium mock toggle in settings for fast testing
@@ -119,9 +123,56 @@ If these are missing, the app falls back to mock mode so you can still explore t
 2. Copy your project URL and anon key into `.env`.
 3. Run the SQL in `supabase/schema.sql` inside the Supabase SQL editor.
 4. Disable email confirmation in Supabase Auth for the fastest MVP flow, or adapt signup handling if confirmation stays enabled.
-5. Restart Expo after changing environment variables.
+5. Deploy the transcription function:
+
+```bash
+supabase functions deploy transcribe-audio
+supabase functions deploy parse-meal
+```
+
+6. Add the OpenAI secret to Supabase:
+
+```bash
+supabase secrets set OPENAI_API_KEY=your_openai_key
+supabase secrets set OPENAI_AUDIO_MODEL=gpt-4o-mini-transcribe
+supabase secrets set OPENAI_MEAL_PARSER_MODEL=gpt-4o-mini
+```
+
+7. Restart Expo after changing environment variables.
 
 The Supabase client lives in `lib/supabase.ts`.
+
+## Real speech-to-text setup
+
+Real transcription is now routed like this:
+
+1. Expo app records audio locally
+2. The app uploads the file to `supabase/functions/v1/transcribe-audio`
+3. The Edge Function sends the file to OpenAI `POST /v1/audio/transcriptions`
+4. The transcript text is returned to the app for review and editing
+
+This keeps `OPENAI_API_KEY` off the mobile client, which is the production-safe approach for Expo apps.
+
+Relevant files:
+
+- `services/ai/transcriptionService.ts`
+- `services/ai/aiService.ts`
+- `supabase/functions/transcribe-audio/index.ts`
+
+## Real meal parsing setup
+
+Real meal parsing is routed like this:
+
+1. The app sends reviewed meal text to `supabase/functions/v1/parse-meal`
+2. The Edge Function calls OpenAI with structured JSON output rules
+3. The app receives meal type plus parsed food items and estimated quantities
+4. Nutrition matching is then applied locally through the existing nutrition service layer
+
+Relevant files:
+
+- `services/ai/mealParsingService.ts`
+- `services/ai/aiService.ts`
+- `supabase/functions/parse-meal/index.ts`
 
 ## SQL schema example
 
@@ -151,8 +202,10 @@ See the exact SQL policies in `supabase/schema.sql`.
 These files are intentionally separated so real APIs can be introduced cleanly:
 
 - `services/ai/aiService.ts`
-  - Replace `transcribeAudioMock` with OpenAI speech-to-text
-  - Replace `parseMealTextMock` with an LLM meal parser
+  - Real transcription now calls a Supabase Edge Function when Supabase is configured
+  - Real meal parsing now calls a Supabase Edge Function when Supabase is configured
+  - Mock transcription still runs automatically when Supabase is not configured
+  - Mock parsing still runs automatically when Supabase is not configured
 - `services/nutrition/nutritionService.ts`
   - Replace mock nutrition lookup with USDA or another nutrition API
 - `services/premium/premiumAdviceService.ts`

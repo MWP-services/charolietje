@@ -4,51 +4,91 @@ import { Pressable, Text, View } from 'react-native';
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
+import { FadeInView } from '@/components/common/FadeInView';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SectionHeader } from '@/components/common/SectionHeader';
+import { TrendOverviewCard } from '@/components/history/TrendOverviewCard';
 import { colors } from '@/constants/colors';
 import { useMeals } from '@/hooks/useMeals';
-import { formatDisplayDate, formatRelativeDay } from '@/utils/date';
+import { formatDisplayDate, formatRelativeDay, getLastNDates } from '@/utils/date';
 import { calculateDayTotals } from '@/utils/nutrition';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const meals = useMeals();
   const grouped = [...new Set(meals.map((meal) => meal.date))].sort((a, b) => b.localeCompare(a));
+  const last7Dates = getLastNDates(7).reverse();
+  const weeklyPoints = last7Dates
+    .map((date) => {
+      const mealsForDay = meals.filter((meal) => meal.date === date);
+      const totals = calculateDayTotals(date, mealsForDay);
+      return {
+        label: date.slice(5),
+        calories: totals.calories,
+        protein: totals.protein,
+      };
+    })
+    .reverse();
+
+  const activeDays = weeklyPoints.filter((point) => point.calories > 0).length;
+  const avgMealsPerLoggedDay =
+    grouped.length > 0 ? Math.round((meals.length / grouped.length) * 10) / 10 : 0;
 
   return (
     <ScreenContainer>
-      <AppHeader subtitle="Browse previous days, totals, and logged meals." title="History" />
-      <SectionHeader subtitle="Your recent nutrition timeline" title="Previous days" />
-      {grouped.length ? (
-        <View style={{ gap: 14 }}>
-          {grouped.map((date) => {
-            const mealsForDay = meals.filter((meal) => meal.date === date);
-            const totals = calculateDayTotals(date, mealsForDay);
+      <AppHeader subtitle="Browse previous days, trends, and consistency over time." title="History" />
 
-            return (
-              <Pressable key={date} onPress={() => router.push(`/day/${date}`)}>
-                <Card style={{ gap: 10 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ gap: 4 }}>
-                      <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>{formatDisplayDate(date)}</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>{formatRelativeDay(date)}</Text>
-                    </View>
-                    <Text style={{ color: colors.primary, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>{Math.round(totals.calories)} kcal</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 14 }}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-                      Protein {Math.round(totals.protein)}g
-                    </Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-                      Meals {mealsForDay.length}
-                    </Text>
-                  </View>
+      {grouped.length ? (
+        <>
+          <FadeInView delay={20}>
+            <TrendOverviewCard points={weeklyPoints} />
+          </FadeInView>
+
+          <FadeInView delay={60}>
+            <Card style={{ gap: 14 }}>
+              <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Trend highlights</Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Card style={{ flex: 1, padding: 14, backgroundColor: colors.surfaceMuted }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: 'Manrope_700Bold' }}>ACTIVE DAYS</Text>
+                  <Text style={{ color: colors.text, fontSize: 22, fontFamily: 'Manrope_800ExtraBold' }}>{activeDays}/7</Text>
                 </Card>
-              </Pressable>
-            );
-          })}
-        </View>
+                <Card style={{ flex: 1, padding: 14, backgroundColor: colors.surfaceMuted }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: 'Manrope_700Bold' }}>AVG MEALS</Text>
+                  <Text style={{ color: colors.text, fontSize: 22, fontFamily: 'Manrope_800ExtraBold' }}>{avgMealsPerLoggedDay}</Text>
+                </Card>
+              </View>
+            </Card>
+          </FadeInView>
+
+          <SectionHeader subtitle="Tap a day to open totals and meal details." title="Previous days" />
+          <View style={{ gap: 14 }}>
+            {grouped.map((date, index) => {
+              const mealsForDay = meals.filter((meal) => meal.date === date);
+              const totals = calculateDayTotals(date, mealsForDay);
+
+              return (
+                <FadeInView delay={100 + index * 35} key={date}>
+                  <Pressable onPress={() => router.push(`/day/${date}`)}>
+                    <Card style={{ gap: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ gap: 4 }}>
+                          <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>{formatDisplayDate(date)}</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>{formatRelativeDay(date)}</Text>
+                        </View>
+                        <Text style={{ color: colors.primary, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>{Math.round(totals.calories)} kcal</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>Protein {Math.round(totals.protein)}g</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>Fiber {Math.round(totals.fiber)}g</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>Meals {mealsForDay.length}</Text>
+                      </View>
+                    </Card>
+                  </Pressable>
+                </FadeInView>
+              );
+            })}
+          </View>
+        </>
       ) : (
         <EmptyState description="Once you log meals, your day cards and weekly patterns will appear here." title="No history yet" />
       )}
