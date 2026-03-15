@@ -18,7 +18,8 @@ type GoalsValues = z.input<typeof goalsSchema>;
 
 export default function OnboardingGoalsScreen() {
   const router = useRouter();
-  const { profile, updateProfile } = useProfileStore();
+  const profile = useProfileStore((state) => state.profile);
+  const updateProfile = useProfileStore((state) => state.updateProfile);
   const {
     control,
     handleSubmit,

@@ -23,7 +23,13 @@ export default function VoiceLogMealScreen() {
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const session = useAuthStore((state) => state.session);
-  const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft, error, clearError } = useMealStore();
+  const draftText = useMealStore((state) => state.draftText);
+  const setDraftText = useMealStore((state) => state.setDraftText);
+  const analyzeDraft = useMealStore((state) => state.analyzeDraft);
+  const isAnalyzing = useMealStore((state) => state.isAnalyzing);
+  const clearDraft = useMealStore((state) => state.clearDraft);
+  const error = useMealStore((state) => state.error);
+  const clearError = useMealStore((state) => state.clearError);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);

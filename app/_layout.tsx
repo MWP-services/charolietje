@@ -44,9 +44,14 @@ export default function RootLayout() {
   });
   const router = useRouter();
   const segments = useSegments();
-  const { initialize, isInitializing, session } = useAuthStore();
-  const { profile, isLoading: isProfileLoading, loadProfile, clearProfile } = useProfileStore();
-  const { loadMeals } = useMealStore();
+  const initialize = useAuthStore((state) => state.initialize);
+  const isInitializing = useAuthStore((state) => state.isInitializing);
+  const session = useAuthStore((state) => state.session);
+  const profile = useProfileStore((state) => state.profile);
+  const isProfileLoading = useProfileStore((state) => state.isLoading);
+  const loadProfile = useProfileStore((state) => state.loadProfile);
+  const clearProfile = useProfileStore((state) => state.clearProfile);
+  const loadMeals = useMealStore((state) => state.loadMeals);
 
   useEffect(() => {
     if (error) {
@@ -117,11 +122,11 @@ export default function RootLayout() {
         <Stack.Screen name="meal/log" />
         <Stack.Screen name="meal/result" />
         <Stack.Screen name="meal/[id]" />
-      <Stack.Screen name="meal/edit/[id]" />
-      <Stack.Screen name="day/[date]" />
-      <Stack.Screen name="premium/coming-soon" />
-      <Stack.Screen name="auth" />
-    </Stack>
-  </ThemeProvider>
+        <Stack.Screen name="meal/edit/[id]" />
+        <Stack.Screen name="day/[date]" />
+        <Stack.Screen name="premium/coming-soon" />
+        <Stack.Screen name="auth" />
+      </Stack>
+    </ThemeProvider>
   );
 }

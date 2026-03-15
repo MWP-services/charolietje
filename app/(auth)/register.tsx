@@ -21,7 +21,10 @@ type RegisterValues = {
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUp, error, clearError, setPendingVerificationEmail } = useAuthStore();
+  const signUp = useAuthStore((state) => state.signUp);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const setPendingVerificationEmail = useAuthStore((state) => state.setPendingVerificationEmail);
   const {
     control,
     handleSubmit,

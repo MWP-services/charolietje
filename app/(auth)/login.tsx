@@ -22,7 +22,11 @@ type LoginValues = {
 export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ verified?: string }>();
-  const { signIn, continueAsGuest, error, clearError, setPendingVerificationEmail } = useAuthStore();
+  const signIn = useAuthStore((state) => state.signIn);
+  const continueAsGuest = useAuthStore((state) => state.continueAsGuest);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const setPendingVerificationEmail = useAuthStore((state) => state.setPendingVerificationEmail);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const {
     control,

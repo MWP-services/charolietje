@@ -17,7 +17,11 @@ import { formatMealType } from '@/utils/formatting';
 export default function MealAnalysisResultScreen() {
   const router = useRouter();
   const session = useAuthStore((state) => state.session);
-  const { draftAnalysis, saveDraft, isSaving, error, clearError } = useMealStore();
+  const draftAnalysis = useMealStore((state) => state.draftAnalysis);
+  const saveDraft = useMealStore((state) => state.saveDraft);
+  const isSaving = useMealStore((state) => state.isSaving);
+  const error = useMealStore((state) => state.error);
+  const clearError = useMealStore((state) => state.clearError);
 
   if (!draftAnalysis || !session) {
     return null;
