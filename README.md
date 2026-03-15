@@ -8,7 +8,8 @@ This project is structured like a production-ready mobile app rather than a demo
 
 - Expo + Expo Router + TypeScript
 - Supabase-ready authentication and data layer
-- Mock AI transcription, meal parsing, nutrition matching, and coaching services
+- Mock AI transcription, meal parsing, and coaching services
+- Hybrid nutrition lookup with Open Food Facts, USDA fallback, and local safety fallback
 - Clean reusable component architecture
 - Zustand stores for auth, profile, and meal flow state
 - Seeded demo data so the app feels complete in development mode
@@ -22,12 +23,14 @@ The app runs in two modes:
 
 - Welcome, register, login, onboarding, dashboard, history, premium, settings
 - Protected routing with session restore
+- E-mailverificatieflow met controleer-je-mail scherm en opnieuw-versturen actie
+- Wachtwoord-vergeten flow met deep link terug naar een nieuw-wachtwoord scherm
 - Voice meal logging flow with recording state and transcript review
 - Real OpenAI transcription path via Supabase Edge Function when configured
 - Real OpenAI meal parsing path via Supabase Edge Function when configured
 - Quick-add typed meal path alongside voice logging
 - Editable transcription before analysis
-- Mock AI meal parsing and nutrition enrichment
+- Hybrid nutrition enrichment with Open Food Facts, USDA fallback, and local safety fallback
 - Daily totals for calories, protein, carbs, fat, fiber, sugar, and sodium
 - Meal detail, day detail, edit meal, delete meal
 - Premium coaching screen with goal-aware recommendations
@@ -142,12 +145,17 @@ If these are missing, the app falls back to mock mode so you can still explore t
 1. Create a Supabase project.
 2. Copy your project URL and anon key into `.env`.
 3. Run the SQL in `supabase/schema.sql` inside the Supabase SQL editor.
-4. Disable email confirmation in Supabase Auth for the fastest MVP flow, or adapt signup handling if confirmation stays enabled.
-5. Deploy the transcription function:
+4. Configure Supabase Auth for production:
+   - enable email confirmation
+   - make sure password recovery is enabled
+   - add redirect URLs for your app, including `nutrivoice://auth/callback`
+   - for web/dev, also add your local Expo callback URL if you test there
+5. Deploy the edge functions:
 
 ```bash
 supabase functions deploy transcribe-audio
 supabase functions deploy parse-meal
+supabase functions deploy lookup-nutrition
 ```
 
 If you see `401 Unauthorized` / `Invalid JWT` from the edge function gateway, redeploy using the `supabase/config.toml` included in this project or run:
@@ -155,19 +163,47 @@ If you see `401 Unauthorized` / `Invalid JWT` from the edge function gateway, re
 ```bash
 supabase functions deploy transcribe-audio --no-verify-jwt
 supabase functions deploy parse-meal --no-verify-jwt
+supabase functions deploy lookup-nutrition --no-verify-jwt
 ```
 
-6. Add the OpenAI secret to Supabase:
+6. Add the provider secrets to Supabase:
 
 ```bash
 supabase secrets set OPENAI_API_KEY=your_openai_key
 supabase secrets set OPENAI_AUDIO_MODEL=gpt-4o-mini-transcribe
 supabase secrets set OPENAI_MEAL_PARSER_MODEL=gpt-4o-mini
+supabase secrets set USDA_API_KEY=your_usda_api_key
 ```
 
 7. Restart Expo after changing environment variables.
 
 The Supabase client lives in `lib/supabase.ts`.
+
+## Email verification and password reset
+
+NutriVoice now includes:
+
+- signup that supports email confirmation
+- a dedicated `Controleer je e-mail` screen
+- resend verification email support
+- `Wachtwoord vergeten` flow
+- password reset deep link support through `nutrivoice://auth/callback`
+- in-app `Nieuw wachtwoord instellen` screen
+
+Relevant files:
+
+- `services/auth/authService.ts`
+- `store/authStore.ts`
+- `app/(auth)/verify-email.tsx`
+- `app/(auth)/forgot-password.tsx`
+- `app/auth/callback.tsx`
+- `app/auth/reset-password.tsx`
+
+Important setup:
+
+- keep the Expo scheme in `app.json` as `nutrivoice`
+- add `nutrivoice://auth/callback` to Supabase Auth redirect URLs
+- on iOS, test these flows in a development build or release build, not only in the browser
 
 ## Real speech-to-text setup
 
@@ -194,13 +230,34 @@ Real meal parsing is routed like this:
 1. The app sends reviewed meal text to `supabase/functions/v1/parse-meal`
 2. The Edge Function calls OpenAI with structured JSON output rules
 3. The app receives meal type plus parsed food items and estimated quantities
-4. Nutrition matching is then applied locally through the existing nutrition service layer
+4. Nutrition matching is requested from the `lookup-nutrition` Edge Function
 
 Relevant files:
 
 - `services/ai/mealParsingService.ts`
 - `services/ai/aiService.ts`
 - `supabase/functions/parse-meal/index.ts`
+
+## Hybrid nutrition lookup setup
+
+Nutrition is now routed like this:
+
+1. The app sends parsed meal items to `supabase/functions/v1/lookup-nutrition`
+2. The Edge Function tries `Open Food Facts` first for branded and European product matches
+3. If nothing useful is found and `USDA_API_KEY` is configured, it tries `USDA FoodData Central`
+4. If neither provider returns a usable match, the app falls back to the built-in local nutrition matcher so the user flow keeps working
+
+Relevant files:
+
+- `services/nutrition/nutritionService.ts`
+- `supabase/functions/lookup-nutrition/index.ts`
+- `constants/mockNutritionDatabase.ts`
+
+Notes:
+
+- `Open Food Facts` does not require an API key for read lookups in this setup
+- `USDA FoodData Central` requires `USDA_API_KEY` as a Supabase secret
+- For production scale, add caching and rate limiting around `lookup-nutrition`
 
 ## SQL schema example
 
@@ -235,7 +292,8 @@ These files are intentionally separated so real APIs can be introduced cleanly:
   - Mock transcription still runs automatically when Supabase is not configured
   - Mock parsing still runs automatically when Supabase is not configured
 - `services/nutrition/nutritionService.ts`
-  - Replace mock nutrition lookup with USDA or another nutrition API
+  - Hybrid nutrition lookup now uses Open Food Facts plus USDA via Supabase Edge Function
+  - Local matching remains as resilient fallback if providers fail or return nothing
 - `services/premium/premiumAdviceService.ts`
   - Replace mock coaching with an LLM-backed advice endpoint
 
@@ -256,7 +314,7 @@ Relevant TODO comments are already placed in those files.
 ## Suggested next steps
 
 1. Replace placeholder store assets with final branded icon, splash, and screenshots.
-2. Replace nutrition mocks with a verified food database.
+2. Add caching and rate limiting around the new hybrid nutrition provider.
 3. Move premium advice generation to a backend service.
 4. Add real subscription entitlements.
 5. Add production analytics, crash reporting, and moderation-safe API monitoring.
@@ -265,7 +323,7 @@ Relevant TODO comments are already placed in those files.
 
 - Audio recording is real, and transcription can use the Supabase Edge Function + OpenAI path when configured
 - Meal parsing can use the Supabase Edge Function + OpenAI path when configured
-- Nutrition lookup is still mock/service-based
+- Nutrition lookup now uses Open Food Facts, USDA fallback, and local fallback matching
 - Supabase integration is real when environment variables are configured
 - In mock mode the app seeds realistic meals so dashboard and history feel complete immediately
 

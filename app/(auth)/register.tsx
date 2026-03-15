@@ -5,6 +5,7 @@ import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { FormField } from '@/components/common/FormField';
+import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { colors } from '@/constants/colors';
@@ -20,7 +21,7 @@ type RegisterValues = {
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUp, error, clearError } = useAuthStore();
+  const { signUp, error, clearError, setPendingVerificationEmail } = useAuthStore();
   const {
     control,
     handleSubmit,
@@ -38,7 +39,16 @@ export default function RegisterScreen() {
   const onSubmit = handleSubmit(async (values) => {
     clearError();
     try {
-      await signUp(values);
+      const result = await signUp(values);
+      if (result.requiresEmailVerification) {
+        setPendingVerificationEmail(result.email);
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: { email: result.email },
+        });
+        return;
+      }
+
       router.replace('/(onboarding)/goals');
     } catch (submitError) {
       Alert.alert('Registratie mislukt', submitError instanceof Error ? submitError.message : 'Probeer het opnieuw.');
@@ -48,6 +58,10 @@ export default function RegisterScreen() {
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
       <AppHeader showBackButton subtitle="Maak je account aan en begin met tracken via je stem." title="Account aanmaken" />
+      <InlineMessage
+        description="Na registratie bevestig je eerst je e-mailadres. Daarna sturen we je automatisch door naar onboarding."
+        title="Veilige accountactivatie"
+      />
       <View style={{ gap: 18 }}>
         <Controller
           control={control}

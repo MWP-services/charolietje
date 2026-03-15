@@ -3,7 +3,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { calculateMealTotals } from '@/utils/nutrition';
 
 import { parseMealTextWithOpenAI } from '@/services/ai/mealParsingService';
-import { getNutritionForItemsMock } from '@/services/nutrition/nutritionService';
+import { nutritionService } from '@/services/nutrition/nutritionService';
 import { transcribeAudioWithOpenAI } from '@/services/ai/transcriptionService';
 
 const sampleTranscriptions = [
@@ -222,7 +222,7 @@ export const aiService = {
   },
   async analyzeText(text: string): Promise<AnalyzedMeal> {
     const parsed = await this.parseMealText(text);
-    const items = await getNutritionForItemsMock(parsed.items);
+    const items = await nutritionService.getNutritionForItems(parsed.items);
     return {
       mealType: parsed.mealType,
       originalText: text,

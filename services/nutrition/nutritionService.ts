@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { mockNutritionDatabase } from '@/constants/mockNutritionDatabase';
 import type { AnalyzedMealItem, ParsedMealItem } from '@/types/meal';
 import type { NutritionReference } from '@/types/nutrition';
@@ -173,6 +174,13 @@ const getMultiplier = (quantity: number, unit: string, reference: NutritionRefer
   return 1;
 };
 
+type RemoteNutritionLookupItem = AnalyzedMealItem & {
+  matched?: boolean;
+  source?: string | null;
+};
+
+const getFunctionUrl = (path: string) => `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/${path}`;
+
 export const getNutritionForItemsMock = async (items: ParsedMealItem[]): Promise<AnalyzedMealItem[]> => {
   const enriched = items.map((item) => {
     const { reference, normalizedUnit } = resolveReference(item.name, item.unit);
@@ -194,7 +202,67 @@ export const getNutritionForItemsMock = async (items: ParsedMealItem[]): Promise
   return withDelay(enriched, 520);
 };
 
-// TODO: Replace this mock enrichment with a nutrition API or internal matcher.
+const getNutritionFromRemoteProviders = async (items: ParsedMealItem[]): Promise<AnalyzedMealItem[]> => {
+  const response = await fetch(getFunctionUrl('lookup-nutrition'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    },
+    body: JSON.stringify({ items }),
+  });
+
+  if (!response.ok) {
+    let detail = 'Het verzoek naar de nutrition service is mislukt.';
+    try {
+      const body = await response.json();
+      detail = body.detail ?? body.message ?? body.error ?? detail;
+    } catch {
+      const fallbackText = await response.text();
+      if (fallbackText) {
+        detail = fallbackText;
+      }
+    }
+
+    throw new Error(`Nutrition lookup mislukt (${response.status} ${response.statusText}). ${detail}`);
+  }
+
+  const data = (await response.json()) as { items?: RemoteNutritionLookupItem[] };
+
+  if (!data.items?.length) {
+    throw new Error('De nutrition service gaf geen items terug.');
+  }
+
+  const mockFallback = await getNutritionForItemsMock(items);
+
+  return data.items.map((item, index) =>
+    item.matched
+      ? {
+          ...items[index],
+          ...item,
+          calories: round(item.calories),
+          protein: round(item.protein),
+          carbs: round(item.carbs),
+          fat: round(item.fat),
+          fiber: round(item.fiber),
+          sugar: round(item.sugar),
+          sodium: round(item.sodium),
+        }
+      : mockFallback[index],
+  );
+};
+
 export const nutritionService = {
-  getNutritionForItems: getNutritionForItemsMock,
+  async getNutritionForItems(items: ParsedMealItem[]) {
+    if (!isSupabaseConfigured) {
+      return getNutritionForItemsMock(items);
+    }
+
+    try {
+      return await getNutritionFromRemoteProviders(items);
+    } catch (error) {
+      console.warn('Falling back to local nutrition matcher:', error);
+      return getNutritionForItemsMock(items);
+    }
+  },
 };

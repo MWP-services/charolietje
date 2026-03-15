@@ -13,6 +13,7 @@ import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealTypeSelector } from '@/components/meal/MealTypeSelector';
 import { colors } from '@/constants/colors';
+import { useMeals } from '@/hooks/useMeals';
 import { aiService } from '@/services/ai/aiService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
 import { useMealStore } from '@/store/mealStore';
@@ -23,7 +24,8 @@ import { calculateMealTotals, toMealTotalsRecord } from '@/utils/nutrition';
 export default function EditMealScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const meal = useMealStore((state) => state.meals.find((entry) => entry.id === id));
+  const meals = useMeals();
+  const meal = meals.find((entry) => entry.id === id);
   const updateMeal = useMealStore((state) => state.updateMeal);
   const [text, setText] = useState(meal?.original_text ?? '');
   const [mealType, setMealType] = useState<MealType>(meal?.meal_type ?? 'unknown');

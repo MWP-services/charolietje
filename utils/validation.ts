@@ -17,6 +17,20 @@ export const loginSchema = z.object({
   password: z.string().min(8, 'Wachtwoord moet minimaal 8 tekens hebben'),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.email('Vul een geldig e-mailadres in'),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Wachtwoord moet minimaal 8 tekens hebben'),
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: 'Wachtwoorden komen niet overeen',
+    path: ['confirmPassword'],
+  });
+
 export const goalsSchema = z.object({
   goal: z.enum(['lose_weight', 'maintain', 'build_muscle']),
   calorieTarget: z

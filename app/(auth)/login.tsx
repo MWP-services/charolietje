@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { FormField } from '@/components/common/FormField';
+import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
@@ -20,7 +21,8 @@ type LoginValues = {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, continueAsGuest, error, clearError } = useAuthStore();
+  const params = useLocalSearchParams<{ verified?: string }>();
+  const { signIn, continueAsGuest, error, clearError, setPendingVerificationEmail } = useAuthStore();
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const {
     control,
@@ -40,6 +42,15 @@ export default function LoginScreen() {
       await signIn(values);
       router.replace('/(tabs)');
     } catch (submitError) {
+      if (submitError instanceof Error && /email.*confirmed|email.*verification|not confirmed/i.test(submitError.message)) {
+        setPendingVerificationEmail(values.email);
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: { email: values.email },
+        });
+        return;
+      }
+
       Alert.alert('Inloggen mislukt', submitError instanceof Error ? submitError.message : 'Probeer het opnieuw.');
     }
   });
@@ -60,6 +71,13 @@ export default function LoginScreen() {
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
       <AppHeader showBackButton subtitle="Welkom terug bij slimmer voeding tracken." title="Inloggen" />
+      {params.verified === '1' ? (
+        <InlineMessage
+          description="Je e-mailadres is bevestigd. Log nu in om door te gaan met onboarding of direct naar je dashboard te gaan."
+          title="Je account is geverifieerd"
+          tone="success"
+        />
+      ) : null}
       <View style={{ gap: 18 }}>
         <Controller
           control={control}
@@ -103,6 +121,11 @@ export default function LoginScreen() {
       <SecondaryButton label={isGuestLoading ? 'Gastmodus openen...' : 'Ga verder als gast'} onPress={onContinueAsGuest} disabled={isSubmitting || isGuestLoading} />
       <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
         In gastmodus kun je de app gebruiken en maaltijden typen, maar spraaktranscriptie is uitgeschakeld.
+      </Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
+        <Link href="/(auth)/forgot-password" style={{ color: colors.secondary, fontFamily: 'Manrope_700Bold' }}>
+          Wachtwoord vergeten?
+        </Link>
       </Text>
       <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
         Nieuw hier?{' '}

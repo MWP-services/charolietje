@@ -19,8 +19,10 @@ import { settingsSchema } from '@/utils/validation';
 type SettingsValues = z.input<typeof settingsSchema>;
 
 export default function ProfileSettingsScreen() {
-  const { signOut } = useAuthStore();
-  const { profile, updateProfile, isLoading } = useProfileStore();
+  const signOut = useAuthStore((state) => state.signOut);
+  const profile = useProfileStore((state) => state.profile);
+  const updateProfile = useProfileStore((state) => state.updateProfile);
+  const isLoading = useProfileStore((state) => state.isLoading);
   const { isRefreshing, refresh } = useAppDataRefresh();
   const {
     control,

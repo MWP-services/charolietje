@@ -10,6 +10,7 @@ import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { NutritionRow } from '@/components/meal/NutritionRow';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
+import { useMeals } from '@/hooks/useMeals';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { formatDisplayDate } from '@/utils/date';
@@ -18,7 +19,8 @@ import { formatMealType } from '@/utils/formatting';
 export default function MealDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const meal = useMealStore((state) => state.meals.find((entry) => entry.id === id));
+  const meals = useMeals();
+  const meal = meals.find((entry) => entry.id === id);
   const isMealsLoading = useMealStore((state) => state.isLoading);
   const session = useAuthStore((state) => state.session);
   const deleteMeal = useMealStore((state) => state.deleteMeal);

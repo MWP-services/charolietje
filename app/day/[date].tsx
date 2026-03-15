@@ -11,6 +11,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealCard } from '@/components/dashboard/MealCard';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
+import { useMeals } from '@/hooks/useMeals';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
@@ -23,7 +24,7 @@ export default function DayDetailScreen() {
   const session = useAuthStore((state) => state.session);
   const profile = useProfileStore((state) => state.profile);
   const isMealsLoading = useMealStore((state) => state.isLoading);
-  const meals = useMealStore((state) => state.meals.filter((meal) => meal.date === date));
+  const meals = useMeals(date);
   const deleteMeal = useMealStore((state) => state.deleteMeal);
   const { isRefreshing, refresh } = useAppDataRefresh();
 

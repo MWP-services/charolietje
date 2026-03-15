@@ -80,9 +80,10 @@ export default function RootLayout() {
 
     const group = segments[0];
     const inAuth = group === '(auth)';
+    const inDirectAuth = group === 'auth';
     const inOnboarding = group === '(onboarding)';
 
-    if (!session && !inAuth) {
+    if (!session && !inAuth && !inDirectAuth) {
       router.replace('/(auth)/welcome');
       return;
     }
@@ -116,10 +117,11 @@ export default function RootLayout() {
         <Stack.Screen name="meal/log" />
         <Stack.Screen name="meal/result" />
         <Stack.Screen name="meal/[id]" />
-        <Stack.Screen name="meal/edit/[id]" />
-        <Stack.Screen name="day/[date]" />
-        <Stack.Screen name="premium/coming-soon" />
-      </Stack>
-    </ThemeProvider>
+      <Stack.Screen name="meal/edit/[id]" />
+      <Stack.Screen name="day/[date]" />
+      <Stack.Screen name="premium/coming-soon" />
+      <Stack.Screen name="auth" />
+    </Stack>
+  </ThemeProvider>
   );
 }

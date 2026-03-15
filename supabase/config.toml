@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.parse-meal]
 verify_jwt = false
+
+[functions.lookup-nutrition]
+verify_jwt = false

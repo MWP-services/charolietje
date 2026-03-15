@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 
 import { buildSeedProfile } from '@/constants/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { profileRepository } from '@/repositories/profileRepository';
-import type { AppSession } from '@/types/auth';
+import type { AppSession, AuthRedirectResult, AuthSignUpResult } from '@/types/auth';
 
 const mockSessionKey = 'nutrivoice:mock-session';
 const guestSessionId = 'guest_local';
@@ -19,6 +20,8 @@ type SignInInput = {
   password: string;
 };
 
+type VerificationType = 'email' | 'signup' | 'recovery' | 'magiclink' | 'invite' | 'email_change';
+
 const persistMockSession = async (session: AppSession | null) => {
   if (!session) {
     await AsyncStorage.removeItem(mockSessionKey);
@@ -31,6 +34,44 @@ const persistMockSession = async (session: AppSession | null) => {
 const getPersistedLocalSession = async () => {
   const raw = await AsyncStorage.getItem(mockSessionKey);
   return raw ? (JSON.parse(raw) as AppSession) : null;
+};
+
+const toAppSession = (session: { user: { id: string; email?: string | null } }): AppSession => ({
+  userId: session.user.id,
+  email: session.user.email ?? null,
+  provider: 'supabase',
+});
+
+const buildAuthRedirectUrl = () => Linking.createURL('/auth/callback');
+
+const normalizeVerificationType = (type: string | null): VerificationType | null => {
+  switch (type) {
+    case 'signup':
+    case 'magiclink':
+    case 'email':
+    case 'recovery':
+    case 'invite':
+    case 'email_change':
+      return type;
+    default:
+      return null;
+  }
+};
+
+const parseAuthUrl = (url: string) => {
+  const parsedUrl = new URL(url);
+  const hash = parsedUrl.hash.startsWith('#') ? parsedUrl.hash.slice(1) : parsedUrl.hash;
+  const hashParams = new URLSearchParams(hash);
+
+  const get = (key: string) => parsedUrl.searchParams.get(key) ?? hashParams.get(key);
+
+  return {
+    tokenHash: get('token_hash'),
+    type: get('type'),
+    accessToken: get('access_token'),
+    refreshToken: get('refresh_token'),
+    errorDescription: get('error_description') ?? get('error'),
+  };
 };
 
 export const authService = {
@@ -51,22 +92,19 @@ export const authService = {
         return null;
       }
 
-      return {
-        userId: session.user.id,
-        email: session.user.email ?? null,
-        provider: 'supabase',
-      } satisfies AppSession;
+      return toAppSession(session);
     }
 
     return localSession;
   },
 
-  async signUp({ fullName, email, password }: SignUpInput) {
+  async signUp({ fullName, email, password }: SignUpInput): Promise<AuthSignUpResult> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: buildAuthRedirectUrl(),
           data: {
             full_name: fullName,
           },
@@ -81,21 +119,24 @@ export const authService = {
         throw new Error('Account aanmaken mislukt');
       }
 
+      const session = data.session ? toAppSession(data.session) : null;
       await persistMockSession(null);
 
-      await profileRepository.upsertProfile({
-        ...buildSeedProfile(data.user.id, email),
-        full_name: fullName,
-        email,
-        is_premium: false,
-        has_completed_onboarding: false,
-      });
+      if (session) {
+        await profileRepository.upsertProfile({
+          ...buildSeedProfile(data.user.id, email),
+          full_name: fullName,
+          email,
+          is_premium: false,
+          has_completed_onboarding: false,
+        });
+      }
 
       return {
-        userId: data.user.id,
+        session,
         email,
-        provider: 'supabase',
-      } satisfies AppSession;
+        requiresEmailVerification: !session,
+      };
     }
 
     const session = {
@@ -111,7 +152,11 @@ export const authService = {
       is_premium: false,
       has_completed_onboarding: false,
     });
-    return session;
+    return {
+      session,
+      email,
+      requiresEmailVerification: false,
+    };
   },
 
   async signIn({ email, password }: SignInInput) {
@@ -178,6 +223,102 @@ export const authService = {
         throw error;
       }
     }
+  },
+
+  async resendVerificationEmail(email: string) {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: buildAuthRedirectUrl(),
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  },
+
+  async requestPasswordReset(email: string) {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error('Wachtwoord resetten is alleen beschikbaar wanneer Supabase is ingesteld.');
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: buildAuthRedirectUrl(),
+    });
+
+    if (error) {
+      throw error;
+    }
+  },
+
+  async updatePassword(password: string) {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error('Wachtwoord wijzigen is alleen beschikbaar wanneer Supabase is ingesteld.');
+    }
+
+    const { data, error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      throw error;
+    }
+
+    if (!data.user) {
+      throw new Error('Er is geen geldige sessie om het wachtwoord te wijzigen.');
+    }
+  },
+
+  async handleAuthRedirect(url: string): Promise<AuthRedirectResult> {
+    if (!isSupabaseConfigured || !supabase) {
+      return { status: 'ignored', session: null };
+    }
+
+    const { tokenHash, type, accessToken, refreshToken, errorDescription } = parseAuthUrl(url);
+
+    if (errorDescription) {
+      throw new Error(decodeURIComponent(errorDescription));
+    }
+
+    if (accessToken && refreshToken) {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        status: type === 'recovery' ? 'password_recovery' : 'session_restored',
+        session: data.session ? toAppSession(data.session) : null,
+      };
+    }
+
+    const normalizedType = normalizeVerificationType(type);
+
+    if (tokenHash && normalizedType) {
+      const verifyType = normalizedType === 'signup' || normalizedType === 'magiclink' ? 'email' : normalizedType;
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: verifyType,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        status: normalizedType === 'recovery' ? 'password_recovery' : 'email_verified',
+        session: data.session ? toAppSession(data.session) : null,
+      };
+    }
+
+    return { status: 'ignored', session: null };
   },
 
   onAuthStateChange(callback: (session: AppSession | null) => void) {

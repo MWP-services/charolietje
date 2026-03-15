@@ -67,6 +67,7 @@ export default function WelcomeScreen() {
       <View style={{ gap: 12 }}>
         <PrimaryButton label="Account aanmaken" onPress={() => router.push('/(auth)/register')} />
         <SecondaryButton label="Inloggen" onPress={() => router.push('/(auth)/login')} />
+        <SecondaryButton label="Wachtwoord vergeten" onPress={() => router.push('/(auth)/forgot-password')} />
       </View>
     </ScreenContainer>
   );
