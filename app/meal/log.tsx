@@ -1,8 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
@@ -30,20 +36,11 @@ export default function VoiceLogMealScreen() {
   const clearDraft = useMealStore((state) => state.clearDraft);
   const error = useMealStore((state) => state.error);
   const clearError = useMealStore((state) => state.clearError);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [seconds, setSeconds] = useState(0);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 250);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [lastAudioUri, setLastAudioUri] = useState<string | null>(null);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
 
   const isTypedMode = mode === 'typed';
   const isGuestMode = session?.provider === 'guest';
@@ -57,43 +54,36 @@ export default function VoiceLogMealScreen() {
 
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
         Alert.alert('Microfoonrechten', 'NutriVoice heeft toegang tot je microfoon nodig om je maaltijd op te nemen.');
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        interruptionMode: 'duckOthers',
+        shouldPlayInBackground: false,
+        shouldRouteThroughEarpiece: false,
       });
 
-      const nextRecording = new Audio.Recording();
-      await nextRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      await nextRecording.startAsync();
-      setRecording(nextRecording);
-      setSeconds(0);
-      timerRef.current = setInterval(() => {
-        setSeconds((value) => value + 1);
-      }, 1000);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
     } catch (error) {
       Alert.alert('Opnamefout', error instanceof Error ? error.message : 'Opname starten lukte niet.');
     }
   };
 
   const stopRecording = async () => {
-    if (!recording) {
+    if (!recorderState.isRecording) {
       return;
     }
 
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
+      await recorder.stop();
+      const uri = recorder.uri ?? recorder.getStatus().url;
       if (!uri) {
         return;
       }
@@ -164,9 +154,9 @@ export default function VoiceLogMealScreen() {
       ) : null}
       <FadeInView delay={40}>
         <Card style={{ alignItems: 'center', gap: 18 }}>
-          <MicButton disabled={isGuestMode} isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
+          <MicButton disabled={isGuestMode} isRecording={recorderState.isRecording} onPress={recorderState.isRecording ? stopRecording : startRecording} />
           <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
-            {recording
+            {recorderState.isRecording
               ? 'Bezig met opnemen...'
               : isGuestMode
                 ? 'Typ hieronder je maaltijd'
@@ -175,8 +165,8 @@ export default function VoiceLogMealScreen() {
                   : 'Tik op de microfoon om te starten'}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
-            {recording
-              ? `${seconds}s opgenomen`
+            {recorderState.isRecording
+              ? `${Math.max(1, Math.floor(recorderState.durationMillis / 1000))}s opgenomen`
               : isGuestMode
                 ? 'Getypte invoer werkt volledig in gastmodus. Maak een account aan als je ook audio wilt transcriberen.'
               : isTypedMode
@@ -240,7 +230,7 @@ export default function VoiceLogMealScreen() {
           setDraftText(draftText || 'Ik had ');
           router.replace('/meal/log?mode=typed');
         }}
-        disabled={Boolean(recording)}
+        disabled={recorderState.isRecording}
       />
     </ScreenContainer>
   );
