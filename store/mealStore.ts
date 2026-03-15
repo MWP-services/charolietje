@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { aiService } from '@/services/ai/aiService';
 import { mealService } from '@/services/meals/mealService';
 import type { AnalyzedMeal, MealWithItems } from '@/types/meal';
+import { sortMealsByCreatedAt } from '@/utils/date';
 
 type MealState = {
   meals: MealWithItems[];
@@ -36,10 +37,10 @@ export const useMealStore = create<MealState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const meals = await mealService.listMeals(userId);
-      set({ meals, isLoading: false });
+      set({ meals: sortMealsByCreatedAt(meals), isLoading: false });
       return meals;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load meals';
+      const message = error instanceof Error ? error.message : 'Maaltijden laden mislukt';
       set({ isLoading: false, error: message });
       throw error;
     }
@@ -50,7 +51,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   async analyzeDraft() {
     const text = get().draftText.trim();
     if (!text) {
-      throw new Error('Enter a meal description before analyzing');
+      throw new Error('Voer eerst een maaltijdomschrijving in voordat je analyseert');
     }
 
     set({ isAnalyzing: true, error: null });
@@ -59,7 +60,7 @@ export const useMealStore = create<MealState>((set, get) => ({
       set({ draftAnalysis: analysis, isAnalyzing: false });
       return analysis;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Meal analysis failed';
+      const message = error instanceof Error ? error.message : 'Maaltijdanalyse mislukt';
       set({ isAnalyzing: false, error: message });
       throw error;
     }
@@ -73,14 +74,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   async saveDraft(userId) {
     const { draftText, draftAnalysis, meals } = get();
     if (!draftAnalysis) {
-      throw new Error('Analyze a meal before saving');
+      throw new Error('Analyseer eerst een maaltijd voordat je opslaat');
     }
 
     set({ isSaving: true, error: null });
     try {
       const meal = await mealService.saveAnalyzedMeal(userId, draftText, draftAnalysis);
       set({
-        meals: [meal, ...meals.filter((existing) => existing.id !== meal.id)],
+        meals: sortMealsByCreatedAt([meal, ...meals.filter((existing) => existing.id !== meal.id)]),
         isSaving: false,
         draftText: '',
         draftAnalysis: null,
@@ -88,7 +89,7 @@ export const useMealStore = create<MealState>((set, get) => ({
       });
       return meal;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Meal save failed';
+      const message = error instanceof Error ? error.message : 'Maaltijd opslaan mislukt';
       set({ isSaving: false, error: message });
       throw error;
     }
@@ -102,7 +103,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   async updateMeal(meal) {
     const updated = await mealService.updateMeal(meal);
     set(({ meals }) => ({
-      meals: [updated, ...meals.filter((entry) => entry.id !== meal.id)],
+      meals: sortMealsByCreatedAt([updated, ...meals.filter((entry) => entry.id !== meal.id)]),
     }));
     return updated;
   },

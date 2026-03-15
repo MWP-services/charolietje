@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
 import { FadeInView } from '@/components/common/FadeInView';
@@ -18,7 +19,6 @@ import { useMealStore } from '@/store/mealStore';
 import type { MealItem, MealType } from '@/types/meal';
 import { createId, createUuid } from '@/utils/id';
 import { calculateMealTotals, toMealTotalsRecord } from '@/utils/nutrition';
-import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function EditMealScreen() {
   const router = useRouter();
@@ -72,9 +72,13 @@ export default function EditMealScreen() {
     ]);
   };
 
+  const removeItem = (itemId: string) => {
+    setItems((current) => (current.length === 1 ? current : current.filter((entry) => entry.id !== itemId)));
+  };
+
   const reparseFromText = async () => {
     if (!text.trim()) {
-      setError('Enter a meal description before reparsing.');
+      setError('Voer eerst een maaltijdomschrijving in voordat je opnieuw analyseert.');
       return;
     }
 
@@ -86,12 +90,12 @@ export default function EditMealScreen() {
       setItems(
         analysis.items.map((item) => ({
           ...item,
-          id: createId('item'),
+          id: isSupabaseConfigured ? createUuid() : createId('item'),
           meal_id: meal.id,
         })),
       );
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not re-parse the meal text.');
+      setError(error instanceof Error ? error.message : 'De maaltijdtekst kon niet opnieuw worden geparseerd.');
     } finally {
       setIsReparsing(false);
     }
@@ -99,12 +103,12 @@ export default function EditMealScreen() {
 
   const onSave = async () => {
     if (!text.trim()) {
-      setError('Original text cannot be empty.');
+      setError('Originele tekst mag niet leeg zijn.');
       return;
     }
 
     if (!items.length || items.some((item) => !item.name.trim())) {
-      setError('Every meal item needs a name before saving.');
+      setError('Elk maaltijditem moet een naam hebben voordat je opslaat.');
       return;
     }
 
@@ -135,7 +139,7 @@ export default function EditMealScreen() {
       });
       router.replace(`/meal/${meal.id}`);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Please try again.');
+      setError(error instanceof Error ? error.message : 'Probeer het opnieuw.');
     } finally {
       setIsSaving(false);
     }
@@ -143,78 +147,72 @@ export default function EditMealScreen() {
 
   return (
     <ScreenContainer>
-      <AppHeader showBackButton subtitle="Refine meal text, item estimates, and meal type." title="Edit meal" />
-      {error ? (
-        <InlineMessage
-          actionLabel="Dismiss"
-          onActionPress={() => setError(null)}
-          title={error}
-          tone="error"
-        />
-      ) : null}
+      <AppHeader showBackButton subtitle="Verfijn maaltijdtekst, itemschattingen en maaltijdtype." title="Maaltijd bewerken" />
+      {error ? <InlineMessage actionLabel="Sluiten" onActionPress={() => setError(null)} title={error} tone="error" /> : null}
 
       <FadeInView delay={20}>
-        <FormField label="Original text" multiline onChangeText={setText} value={text} />
+        <FormField label="Originele tekst" multiline onChangeText={setText} value={text} />
       </FadeInView>
 
       <FadeInView delay={60}>
         <Card style={{ gap: 14 }}>
-          <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Meal type</Text>
+          <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Maaltijdtype</Text>
           <MealTypeSelector onChange={setMealType} value={mealType} />
-          <SecondaryButton label={isReparsing ? 'Reparsing...' : 'Re-parse from text'} onPress={reparseFromText} disabled={isReparsing} />
+          <SecondaryButton label={isReparsing ? 'Opnieuw analyseren...' : 'Opnieuw analyseren op basis van tekst'} onPress={reparseFromText} disabled={isReparsing} />
         </Card>
       </FadeInView>
 
       <FadeInView delay={100}>
         <Card style={{ gap: 16 }}>
-          <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Meal items</Text>
+          <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Maaltijditems</Text>
           {items.map((item, index) => (
             <View key={item.id} style={{ gap: 12, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: 'Manrope_700Bold' }}>ITEM {index + 1}</Text>
-              <FormField label="Name" onChangeText={(value) => updateItem(item.id, { name: value })} value={item.name} />
+              <FormField autoCapitalize="words" label="Naam" onChangeText={(value) => updateItem(item.id, { name: value })} value={item.name} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <FormField
+                    inputMode="decimal"
                     keyboardType="numeric"
-                    label="Quantity"
+                    label="Hoeveelheid"
                     onChangeText={(value) => updateItem(item.id, { quantity: Number(value) || 0 })}
                     value={String(item.quantity)}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <FormField label="Unit" onChangeText={(value) => updateItem(item.id, { unit: value })} value={item.unit} />
+                  <FormField autoCapitalize="none" label="Eenheid" onChangeText={(value) => updateItem(item.id, { unit: value })} value={item.unit} />
                 </View>
               </View>
               <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-                Preview: {Math.round(item.calories)} kcal • {Math.round(item.protein)}g protein • {Math.round(item.carbs)}g carbs • {Math.round(item.fat)}g fat
+                Voorbeeld: {Math.round(item.calories)} kcal - {Math.round(item.protein)}g eiwit - {Math.round(item.carbs)}g koolhydraten - {Math.round(item.fat)}g vet
               </Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <SecondaryButton label="Duplicate item" onPress={() => duplicateItem(item)} />
+                  <SecondaryButton label="Item dupliceren" onPress={() => duplicateItem(item)} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <SecondaryButton label="Remove item" onPress={() => setItems((current) => current.filter((entry) => entry.id !== item.id))} />
+                  <SecondaryButton disabled={items.length === 1} label={items.length === 1 ? 'Minstens 1 item nodig' : 'Item verwijderen'} onPress={() => removeItem(item.id)} />
                 </View>
               </View>
             </View>
           ))}
-          <SecondaryButton label="Add item" onPress={addItem} />
+          <SecondaryButton label="Item toevoegen" onPress={addItem} />
         </Card>
       </FadeInView>
 
       <FadeInView delay={140}>
         <Card style={{ gap: 8 }}>
-          <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Recalculated preview</Text>
+          <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Herberekende preview</Text>
           <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(previewTotals.calories)} kcal • {Math.round(previewTotals.protein)}g protein • {Math.round(previewTotals.carbs)}g carbs • {Math.round(previewTotals.fat)}g fat
+            {Math.round(previewTotals.calories)} kcal - {Math.round(previewTotals.protein)}g eiwit - {Math.round(previewTotals.carbs)}g koolhydraten - {Math.round(previewTotals.fat)}g vet
           </Text>
           <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            Fiber {Math.round(previewTotals.fiber)}g • Sugar {Math.round(previewTotals.sugar)}g • Sodium {Math.round(previewTotals.sodium)}mg
+            Vezels {Math.round(previewTotals.fiber)}g - Suiker {Math.round(previewTotals.sugar)}g - Natrium {Math.round(previewTotals.sodium)}mg
           </Text>
         </Card>
       </FadeInView>
 
-      <PrimaryButton label="Save changes" loading={isSaving} onPress={onSave} />
+      <PrimaryButton label="Wijzigingen opslaan" loading={isSaving} onPress={onSave} />
     </ScreenContainer>
   );
 }

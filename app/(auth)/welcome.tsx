@@ -18,10 +18,10 @@ export default function WelcomeScreen() {
         <View style={{ gap: 14 }}>
           <Text style={{ color: colors.primary, fontSize: 13, letterSpacing: 1.2, fontFamily: 'Manrope_700Bold' }}>NUTRIVOICE</Text>
           <Text style={{ color: colors.text, fontSize: 40, lineHeight: 48, fontFamily: 'Manrope_800ExtraBold' }}>
-            Voice-first nutrition tracking that actually feels easy.
+            Voeding tracken met je stem, zonder gedoe.
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 26, fontFamily: 'Manrope_500Medium' }}>
-            Speak what you ate, review the transcript, and get smart nutrition insights with premium coaching built in.
+            Vertel wat je hebt gegeten, controleer de transcriptie en krijg slimme voedingsinzichten met ingebouwde premium coaching.
           </Text>
         </View>
 
@@ -36,9 +36,9 @@ export default function WelcomeScreen() {
           }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 6, flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: 22, fontFamily: 'Manrope_800ExtraBold' }}>From spoken meals to daily clarity</Text>
+              <Text style={{ color: colors.text, fontSize: 22, fontFamily: 'Manrope_800ExtraBold' }}>Van uitgesproken maaltijden naar dagelijks inzicht</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
-                Transcription, nutrition extraction, daily totals, and AI advice in one flow.
+                Transcriptie, voedingsanalyse, dagtotalen en AI-advies in een vloeiende flow.
               </Text>
             </View>
             <View
@@ -54,7 +54,7 @@ export default function WelcomeScreen() {
             </View>
           </View>
           <View style={{ gap: 12 }}>
-            {['Voice logging in seconds', 'Protein and calorie progress', 'Premium goal-based coaching'].map((item) => (
+            {['Maaltijden loggen in seconden', 'Voortgang op eiwitten en calorieen', 'Premium coaching op basis van je doel'].map((item) => (
               <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Ionicons color={colors.primary} name="checkmark-circle" size={18} />
                 <Text style={{ color: colors.text, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>{item}</Text>
@@ -65,8 +65,8 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={{ gap: 12 }}>
-        <PrimaryButton label="Create account" onPress={() => router.push('/(auth)/register')} />
-        <SecondaryButton label="Log in" onPress={() => router.push('/(auth)/login')} />
+        <PrimaryButton label="Account aanmaken" onPress={() => router.push('/(auth)/register')} />
+        <SecondaryButton label="Inloggen" onPress={() => router.push('/(auth)/login')} />
       </View>
     </ScreenContainer>
   );

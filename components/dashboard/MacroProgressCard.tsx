@@ -34,7 +34,7 @@ export const MacroProgressCard = ({
         <View style={{ width: `${percentage}%`, height: '100%', borderRadius: 999, backgroundColor: color }} />
       </View>
       <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Manrope_500Medium' }}>
-        {target ? `${percentage}% of target reached` : 'No target set yet'}
+        {target ? `${percentage}% van je doel bereikt` : 'Nog geen doel ingesteld'}
       </Text>
     </Card>
   );

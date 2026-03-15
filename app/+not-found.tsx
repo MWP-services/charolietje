@@ -10,10 +10,10 @@ export default function NotFoundScreen() {
   return (
     <ScreenContainer contentStyle={{ justifyContent: 'center' }} scroll={false}>
       <EmptyState
-        description="The page you tried to open doesn’t exist anymore, but your nutrition data is safe."
-        title="Screen not found"
+        description="De pagina die je wilde openen bestaat niet meer, maar je voedingsdata is veilig."
+        title="Scherm niet gevonden"
       />
-      <PrimaryButton label="Go to dashboard" onPress={() => router.replace('/(tabs)')} />
+      <PrimaryButton label="Ga naar overzicht" onPress={() => router.replace('/(tabs)')} />
     </ScreenContainer>
   );
 }

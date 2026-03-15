@@ -21,9 +21,9 @@ export const TrendOverviewCard = ({ points }: TrendOverviewCardProps) => {
   return (
     <Card style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Weekly trend</Text>
+        <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Weektrend</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-          Average {avgCalories} kcal and {avgProtein}g protein across the last 7 days.
+          Gemiddeld {avgCalories} kcal en {avgProtein}g eiwit over de laatste 7 dagen.
         </Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10 }}>

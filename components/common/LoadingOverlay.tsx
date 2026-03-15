@@ -7,7 +7,7 @@ type LoadingOverlayProps = {
   label?: string;
 };
 
-export const LoadingOverlay = ({ visible, label = 'Loading...' }: LoadingOverlayProps) => {
+export const LoadingOverlay = ({ visible, label = 'Laden...' }: LoadingOverlayProps) => {
   if (!visible) {
     return null;
   }

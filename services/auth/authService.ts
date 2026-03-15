@@ -6,6 +6,7 @@ import { profileRepository } from '@/repositories/profileRepository';
 import type { AppSession } from '@/types/auth';
 
 const mockSessionKey = 'nutrivoice:mock-session';
+const guestSessionId = 'guest_local';
 
 type SignUpInput = {
   fullName: string;
@@ -27,8 +28,18 @@ const persistMockSession = async (session: AppSession | null) => {
   await AsyncStorage.setItem(mockSessionKey, JSON.stringify(session));
 };
 
+const getPersistedLocalSession = async () => {
+  const raw = await AsyncStorage.getItem(mockSessionKey);
+  return raw ? (JSON.parse(raw) as AppSession) : null;
+};
+
 export const authService = {
   async getSession() {
+    const localSession = await getPersistedLocalSession();
+    if (localSession && localSession.provider !== 'supabase') {
+      return localSession;
+    }
+
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
@@ -47,8 +58,7 @@ export const authService = {
       } satisfies AppSession;
     }
 
-    const raw = await AsyncStorage.getItem(mockSessionKey);
-    return raw ? (JSON.parse(raw) as AppSession) : null;
+    return localSession;
   },
 
   async signUp({ fullName, email, password }: SignUpInput) {
@@ -68,8 +78,10 @@ export const authService = {
       }
 
       if (!data.user) {
-        throw new Error('Unable to create account');
+        throw new Error('Account aanmaken mislukt');
       }
+
+      await persistMockSession(null);
 
       await profileRepository.upsertProfile({
         ...buildSeedProfile(data.user.id, email),
@@ -110,8 +122,10 @@ export const authService = {
       }
 
       if (!data.user) {
-        throw new Error('Unable to sign in');
+        throw new Error('Inloggen mislukt');
       }
+
+      await persistMockSession(null);
 
       return {
         userId: data.user.id,
@@ -130,16 +144,40 @@ export const authService = {
     return session;
   },
 
+  async continueAsGuest() {
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('Supabase sign-out during guest entry failed:', error.message);
+      }
+    }
+
+    const session = {
+      userId: guestSessionId,
+      email: null,
+      provider: 'guest',
+    } satisfies AppSession;
+
+    await persistMockSession(session);
+    await profileRepository.upsertProfile({
+      ...buildSeedProfile(session.userId, null),
+      full_name: 'Gast',
+      email: undefined,
+      has_completed_onboarding: true,
+    });
+
+    return session;
+  },
+
   async signOut() {
+    await persistMockSession(null);
+
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
       }
-      return;
     }
-
-    await persistMockSession(null);
   },
 
   onAuthStateChange(callback: (session: AppSession | null) => void) {
@@ -148,15 +186,23 @@ export const authService = {
     }
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      callback(
-        session
-          ? {
-              userId: session.user.id,
-              email: session.user.email ?? null,
-              provider: 'supabase',
-            }
-          : null,
-      );
+      void (async () => {
+        const localSession = await getPersistedLocalSession();
+        if (localSession && localSession.provider !== 'supabase') {
+          callback(localSession);
+          return;
+        }
+
+        callback(
+          session
+            ? {
+                userId: session.user.id,
+                email: session.user.email ?? null,
+                provider: 'supabase',
+              }
+            : null,
+        );
+      })();
     });
 
     return () => {

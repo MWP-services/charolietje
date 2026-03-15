@@ -3,19 +3,33 @@
     "name": "NutriVoice",
     "slug": "nutrivoice",
     "version": "1.0.0",
+    "description": "NutriVoice is een voice-first voedingsapp waarmee gebruikers maaltijden kunnen loggen, voedingswaarden volgen en AI-gedreven coaching ontvangen.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nutrivoice",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "primaryColor": "#18B67A",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.nutrivoice.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "requireFullScreen": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.nutrivoice.app",
+      "versionCode": 1,
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,11 +41,21 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "themeColor": "#18B67A"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "NutriVoice gebruikt je microfoon om maaltijden op te nemen en om te zetten naar tekst."
+        }
+      ]
     ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": {
       "typedRoutes": true
     }

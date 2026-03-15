@@ -8,7 +8,7 @@ import { transcribeAudioWithOpenAI } from '@/services/ai/transcriptionService';
 
 const sampleTranscriptions = [
   'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
-  'Voor lunch at ik een chicken sandwich en een appel.',
+  'Voor lunch at ik een kipsandwich en een appel.',
   'Vanavond heb ik rijst met zalm en groenten gegeten.',
 ];
 
@@ -146,6 +146,24 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
       quantity: 50,
       unit: 'gram',
       confidence: 0.82,
+    });
+  }
+
+  if (/(leverworst|liverwurst|leverpastei)/.test(normalized)) {
+    items.push({
+      name: 'liverwurst',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|grams|g)\s*(leverworst|liverwurst|leverpastei)/, 30),
+      unit: 'gram',
+      confidence: 0.79,
+    });
+  }
+
+  if (/(stroopwafel|stroopwafels)/.test(normalized)) {
+    items.push({
+      name: 'stroopwafel',
+      quantity: extractQuantity(normalized, /(\d+)\s*(stroopwafel|stroopwafels)/, 1),
+      unit: 'piece',
+      confidence: 0.83,
     });
   }
 

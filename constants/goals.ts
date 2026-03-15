@@ -8,28 +8,28 @@ export const goalOptions: {
 }[] = [
   {
     value: 'lose_weight',
-    label: 'Lose weight',
-    shortLabel: 'Fat loss',
-    description: 'Focus on satiety, protein, fiber, and smarter calorie density.',
+    label: 'Afvallen',
+    shortLabel: 'Vetverlies',
+    description: 'Focus op verzadiging, eiwitten, vezels en slimmere caloriedichtheid.',
   },
   {
     value: 'maintain',
-    label: 'Maintain weight',
-    shortLabel: 'Maintain',
-    description: 'Build consistency, balanced meals, and steady daily habits.',
+    label: 'Gewicht behouden',
+    shortLabel: 'Behoud',
+    description: 'Werk aan regelmaat, uitgebalanceerde maaltijden en stabiele dagelijkse gewoontes.',
   },
   {
     value: 'build_muscle',
-    label: 'Build muscle',
-    shortLabel: 'Muscle gain',
-    description: 'Prioritize protein timing, calorie sufficiency, and recovery.',
+    label: 'Spieren opbouwen',
+    shortLabel: 'Spiergroei',
+    description: 'Geef prioriteit aan eiwitverdeling, voldoende calorieen en herstel.',
   },
 ];
 
 export const mealTypeOptions = [
-  { value: 'breakfast', label: 'Breakfast' },
+  { value: 'breakfast', label: 'Ontbijt' },
   { value: 'lunch', label: 'Lunch' },
-  { value: 'dinner', label: 'Dinner' },
+  { value: 'dinner', label: 'Avondeten' },
   { value: 'snack', label: 'Snack' },
-  { value: 'unknown', label: 'Unknown' },
+  { value: 'unknown', label: 'Onbekend' },
 ] as const;

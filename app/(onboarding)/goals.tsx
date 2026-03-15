@@ -49,15 +49,15 @@ export default function OnboardingGoalsScreen() {
       });
       router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Could not save onboarding', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Onboarding opslaan mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
     }
   });
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader subtitle="Tell NutriVoice what success looks like for you." title="Set your goal" />
+      <AppHeader subtitle="Laat NutriVoice weten wat voor jou succes betekent." title="Stel je doel in" />
       <View style={{ gap: 16 }}>
-        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Primary goal</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Hoofddoel</Text>
         <Controller
           control={control}
           name="goal"
@@ -66,53 +66,60 @@ export default function OnboardingGoalsScreen() {
       </View>
 
       <Card style={{ gap: 16 }}>
-        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Optional targets</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Optionele doelen</Text>
         <Controller
           control={control}
           name="calorieTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} placeholder="2600" value={value ?? ''} />
+            <FormField error={errors.calorieTarget?.message} inputMode="numeric" keyboardType="numeric" label="Caloriedoel" onChangeText={onChange} placeholder="2600" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="proteinTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} placeholder="180" value={value ?? ''} />
+            <FormField error={errors.proteinTarget?.message} inputMode="numeric" keyboardType="numeric" label="Eiwitdoel" onChangeText={onChange} placeholder="180" value={value ?? ''} />
           )}
         />
       </Card>
 
       <Card style={{ gap: 16 }}>
-        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Profile basics</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Profielgegevens</Text>
         <Controller
           control={control}
           name="age"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.age?.message} keyboardType="numeric" label="Age" onChangeText={onChange} placeholder="31" value={value ?? ''} />
+            <FormField error={errors.age?.message} inputMode="numeric" keyboardType="numeric" label="Leeftijd" onChangeText={onChange} placeholder="31" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="weight"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.weight?.message} keyboardType="numeric" label="Weight (kg)" onChangeText={onChange} placeholder="78" value={value ?? ''} />
+            <FormField error={errors.weight?.message} inputMode="decimal" keyboardType="numeric" label="Gewicht (kg)" onChangeText={onChange} placeholder="78" value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="height"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.height?.message} keyboardType="numeric" label="Height (cm)" onChangeText={onChange} placeholder="182" value={value ?? ''} />
+            <FormField error={errors.height?.message} inputMode="numeric" keyboardType="numeric" label="Lengte (cm)" onChangeText={onChange} placeholder="182" value={value ?? ''} />
           )}
         />
       </Card>
 
       <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-        Current goal: <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold' }}>{watch('goal').replace('_', ' ')}</Text>
+        Huidig doel:{' '}
+        <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold' }}>
+          {watch('goal') === 'lose_weight'
+            ? 'afvallen'
+            : watch('goal') === 'build_muscle'
+              ? 'spieren opbouwen'
+              : 'gewicht behouden'}
+        </Text>
       </Text>
 
-      <PrimaryButton label="Continue to dashboard" loading={isSubmitting} onPress={onSubmit} />
+      <PrimaryButton label="Verder naar overzicht" loading={isSubmitting} onPress={onSubmit} />
     </ScreenContainer>
   );
 }

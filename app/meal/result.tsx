@@ -26,20 +26,20 @@ export default function MealAnalysisResultScreen() {
   const onSave = async () => {
     try {
       const meal = await saveDraft(session.userId);
-      Alert.alert('Meal saved', 'Your dashboard totals have been updated.');
+      Alert.alert('Maaltijd opgeslagen', 'Je totalen in het overzicht zijn bijgewerkt.');
       router.replace(`/meal/${meal.id}`);
     } catch (error) {
-      Alert.alert('Save failed', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Opslaan mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
     }
   };
 
   return (
     <ScreenContainer>
-      <AppHeader showBackButton subtitle="Review the AI estimate before saving it to your day." title="Meal analysis" />
+      <AppHeader showBackButton subtitle="Controleer de AI-inschatting voordat je deze aan je dag toevoegt." title="Maaltijdanalyse" />
       {error ? (
         <InlineMessage
-          actionLabel="Dismiss"
-          description="You can go back to edit the transcript or try saving again once the issue is resolved."
+          actionLabel="Sluiten"
+          description="Je kunt teruggaan om de transcriptie te bewerken of opnieuw opslaan zodra het probleem is opgelost."
           onActionPress={clearError}
           title={error}
           tone="error"
@@ -48,7 +48,7 @@ export default function MealAnalysisResultScreen() {
 
       <FadeInView delay={20}>
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>DETECTED MEAL TYPE</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>GEDETECTEERD MAALTIJDTYPE</Text>
           <Text style={{ color: colors.text, fontSize: 24, fontFamily: 'Manrope_800ExtraBold' }}>{formatMealType(draftAnalysis.mealType)}</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>{draftAnalysis.originalText}</Text>
         </Card>
@@ -64,19 +64,19 @@ export default function MealAnalysisResultScreen() {
 
       <FadeInView delay={140}>
         <Card style={{ gap: 12 }}>
-          <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Meal totals</Text>
+          <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Maaltijdtotalen</Text>
           <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(draftAnalysis.totals.calories)} kcal • {Math.round(draftAnalysis.totals.protein)}g protein • {Math.round(draftAnalysis.totals.carbs)}g carbs •{' '}
-            {Math.round(draftAnalysis.totals.fat)}g fat
+            {Math.round(draftAnalysis.totals.calories)} kcal - {Math.round(draftAnalysis.totals.protein)}g eiwit - {Math.round(draftAnalysis.totals.carbs)}g koolhydraten -{' '}
+            {Math.round(draftAnalysis.totals.fat)}g vet
           </Text>
           <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            Fiber {Math.round(draftAnalysis.totals.fiber)}g • Sugar {Math.round(draftAnalysis.totals.sugar)}g • Sodium {Math.round(draftAnalysis.totals.sodium)}mg
+            Vezels {Math.round(draftAnalysis.totals.fiber)}g - Suiker {Math.round(draftAnalysis.totals.sugar)}g - Natrium {Math.round(draftAnalysis.totals.sodium)}mg
           </Text>
         </Card>
       </FadeInView>
 
-      <PrimaryButton label="Save meal" loading={isSaving} onPress={onSave} />
-      <SecondaryButton label="Edit transcription" onPress={() => router.back()} />
+      <PrimaryButton label="Maaltijd opslaan" loading={isSaving} onPress={onSave} />
+      <SecondaryButton label="Transcriptie bewerken" onPress={() => router.back()} />
     </ScreenContainer>
   );
 }

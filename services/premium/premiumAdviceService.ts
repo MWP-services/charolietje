@@ -4,18 +4,18 @@ const suggestionForGoal = (input: PremiumAdviceInput) => {
   switch (input.goal) {
     case 'lose_weight':
       return [
-        'Keep dinner high in protein and vegetables to stay full while keeping calories efficient.',
-        'Plan a deliberate evening snack if late-night grazing is a common trigger.',
+        'Houd je avondeten rijk aan eiwitten en groenten om vol te blijven met een slimme calorie-inname.',
+        'Plan bewust een avondsnack als laat op de avond snaaien vaak een valkuil is.',
       ];
     case 'build_muscle':
       return [
-        'Spread protein more evenly across the day so each meal supports muscle protein synthesis.',
-        'If calories stay low by late afternoon, add a dense snack like yogurt, oats, or a sandwich.',
+        'Verdeel je eiwitten gelijkmatiger over de dag zodat elke maaltijd spieropbouw ondersteunt.',
+        'Als je calorieen in de namiddag laag blijven, voeg dan een voedzame snack toe zoals yoghurt, havermout of een sandwich.',
       ];
     default:
       return [
-        'Aim for a stable rhythm with protein, produce, and fiber in each main meal.',
-        'Consistency beats perfection, so keep repeating meals that are easy to log and easy to stick with.',
+        'Streef naar een stabiel ritme met eiwitten, groenten of fruit en vezels in elke hoofdmaaltijd.',
+        'Regelmaat wint van perfectie, dus herhaal maaltijden die makkelijk te loggen en vol te houden zijn.',
       ];
   }
 };
@@ -31,29 +31,29 @@ export const generatePremiumAdviceMock = async (input: PremiumAdviceInput): Prom
   const advice: PremiumAdvice = {
     summary:
       input.goal === 'build_muscle'
-        ? 'Today looks solid overall, but there is still room to improve protein distribution and calorie support.'
+        ? 'Vandaag ziet er over het algemeen sterk uit, maar er is nog ruimte om je eiwitverdeling en calorie-ondersteuning te verbeteren.'
         : input.goal === 'lose_weight'
-          ? 'Your day is trending well, with a few leverage points around satiety and calorie density.'
-          : 'Your day looks fairly balanced, with small tweaks that can improve consistency and recovery.',
+          ? 'Je dag ontwikkelt zich goed, met een paar duidelijke kansen rond verzadiging en caloriedichtheid.'
+          : 'Je dag oogt redelijk in balans, met kleine aanpassingen die regelmaat en herstel kunnen verbeteren.',
     strengths: [
       input.dailyTotals.protein >= 100
-        ? 'You already have a strong protein foundation today.'
-        : 'You have at least one protein-containing meal in the day, which is a good base to build on.',
+        ? 'Je hebt vandaag al een sterke eiwitbasis gelegd.'
+        : 'Je hebt in elk geval een maaltijd met eiwitten genomen, en dat is een goede basis om op verder te bouwen.',
       input.dailyTotals.fiber >= 20
-        ? 'Fiber intake is moving in the right direction.'
-        : 'You are logging a mix of meals instead of skipping large parts of the day.',
+        ? 'Je vezelinname gaat duidelijk de goede kant op.'
+        : 'Je logt verschillende maaltijden in plaats van grote delen van de dag over te slaan.',
     ],
     improvements: [
       lowProtein
-        ? 'Protein is still below target. Add a protein-forward snack or stronger protein portion this evening.'
-        : 'Use the next meal to keep protein momentum going instead of letting the last meal carry the whole day.',
+        ? 'Je eiwitinname ligt nog onder je doel. Voeg vanavond een eiwitrijke snack of grotere eiwitportie toe.'
+        : 'Gebruik je volgende maaltijd om je eiwitmomentum vast te houden in plaats van alles op het laatste eetmoment te laten aankomen.',
       lowFiber
-        ? 'Fiber is light today. Oats, fruit, legumes, or whole grain bread would improve fullness and balance.'
-        : 'You can improve nutrient variety by rotating in a second fruit or vegetable source.',
+        ? 'Je vezelinname is vandaag nog laag. Havermout, fruit, peulvruchten of volkoren brood verbeteren verzadiging en balans.'
+        : 'Je kunt de voedingsvariatie vergroten door een tweede bron van fruit of groente toe te voegen.',
     ],
     warnings: [
-      highCalories ? 'Calories are drifting above target, so portion size and energy-dense extras deserve attention.' : '',
-      eveningSnackCount >= 2 ? 'A large share of intake is coming from snacks, which may make your day feel less intentional.' : '',
+      highCalories ? 'Je calorieen lopen boven je doel uit, dus portiegrootte en energierijke extra\'s verdienen aandacht.' : '',
+      eveningSnackCount >= 2 ? 'Een groot deel van je inname komt uit snacks, waardoor je dag minder bewust kan aanvoelen.' : '',
     ].filter(Boolean),
     goal_specific_tips: suggestionForGoal(input),
   };

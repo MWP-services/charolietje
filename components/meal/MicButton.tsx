@@ -7,9 +7,10 @@ import { colors } from '@/constants/colors';
 type MicButtonProps = {
   isRecording: boolean;
   onPress: () => void;
+  disabled?: boolean;
 };
 
-export const MicButton = ({ isRecording, onPress }: MicButtonProps) => {
+export const MicButton = ({ isRecording, onPress, disabled = false }: MicButtonProps) => {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -30,7 +31,13 @@ export const MicButton = ({ isRecording, onPress }: MicButtonProps) => {
   }, [isRecording, pulse]);
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
+    <Pressable
+      accessibilityLabel={disabled ? 'Microfoon niet beschikbaar' : isRecording ? 'Opname stoppen' : 'Opname starten'}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, selected: isRecording }}
+      disabled={disabled}
+      onPress={onPress}
+      style={{ opacity: disabled ? 0.55 : 1 }}>
       <Animated.View
         style={{
           width: 128,

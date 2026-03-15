@@ -16,11 +16,13 @@ import { MicButton } from '@/components/meal/MicButton';
 import { TranscriptionEditor } from '@/components/meal/TranscriptionEditor';
 import { colors } from '@/constants/colors';
 import { aiService } from '@/services/ai/aiService';
+import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 
 export default function VoiceLogMealScreen() {
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const session = useAuthStore((state) => state.session);
   const { draftText, setDraftText, analyzeDraft, isAnalyzing, clearDraft, error, clearError } = useMealStore();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [seconds, setSeconds] = useState(0);
@@ -38,13 +40,20 @@ export default function VoiceLogMealScreen() {
   }, []);
 
   const isTypedMode = mode === 'typed';
+  const isGuestMode = session?.provider === 'guest';
 
   const startRecording = async () => {
+    if (isGuestMode) {
+      Alert.alert('Niet beschikbaar in gastmodus', 'Transcriptie met audio is alleen beschikbaar met een account. Gebruik getypte invoer om toch een maaltijd te loggen.');
+      router.replace('/meal/log?mode=typed');
+      return;
+    }
+
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Microphone permission', 'NutriVoice needs microphone access to record your meal.');
+        Alert.alert('Microfoonrechten', 'NutriVoice heeft toegang tot je microfoon nodig om je maaltijd op te nemen.');
         return;
       }
 
@@ -62,7 +71,7 @@ export default function VoiceLogMealScreen() {
         setSeconds((value) => value + 1);
       }, 1000);
     } catch (error) {
-      Alert.alert('Recording error', error instanceof Error ? error.message : 'Could not start recording.');
+      Alert.alert('Opnamefout', error instanceof Error ? error.message : 'Opname starten lukte niet.');
     }
   };
 
@@ -89,9 +98,9 @@ export default function VoiceLogMealScreen() {
       const transcription = await aiService.transcribeAudio(uri);
       setDraftText(transcription);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not transcribe recording.';
+      const message = error instanceof Error ? error.message : 'Transcriptie lukte niet.';
       setTranscriptionError(message);
-      Alert.alert('Transcription error', message);
+      Alert.alert('Transcriptiefout', message);
     } finally {
       setIsTranscribing(false);
     }
@@ -109,9 +118,9 @@ export default function VoiceLogMealScreen() {
       const transcription = await aiService.transcribeAudio(lastAudioUri);
       setDraftText(transcription);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not transcribe recording.';
+      const message = error instanceof Error ? error.message : 'Transcriptie lukte niet.';
       setTranscriptionError(message);
-      Alert.alert('Transcription error', message);
+      Alert.alert('Transcriptiefout', message);
     } finally {
       setIsTranscribing(false);
     }
@@ -122,32 +131,58 @@ export default function VoiceLogMealScreen() {
       await analyzeDraft();
       router.push('/meal/result');
     } catch (error) {
-      Alert.alert('Analysis failed', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Analyse mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
     }
   };
 
   return (
     <ScreenContainer>
-      <AppHeader actionLabel="Reset" onActionPress={clearDraft} showBackButton subtitle="Speak naturally. You can edit everything before saving." title="Log a meal" />
+      <AppHeader
+        actionLabel="Wissen"
+        onActionPress={clearDraft}
+        showBackButton
+        subtitle={
+          isGuestMode
+            ? 'Gastmodus gebruikt alleen getypte invoer. Maak een account aan voor spraaktranscriptie.'
+            : 'Praat natuurlijk. Je kunt alles nog aanpassen voordat je opslaat.'
+        }
+        title="Maaltijd loggen"
+      />
+      {isGuestMode ? (
+        <InlineMessage
+          actionLabel={isTypedMode ? 'Terug naar overzicht' : 'Gebruik getypte invoer'}
+          description="Je kunt als gast nog steeds maaltijden analyseren, opslaan en je dagtotalen bekijken. Alleen transcriptie via audio is uitgeschakeld."
+          onActionPress={() => router.replace(isTypedMode ? '/(tabs)' : '/meal/log?mode=typed')}
+          title="Spraaktranscriptie is niet beschikbaar in gastmodus"
+        />
+      ) : null}
       <FadeInView delay={40}>
         <Card style={{ alignItems: 'center', gap: 18 }}>
-          <MicButton isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
+          <MicButton disabled={isGuestMode} isRecording={Boolean(recording)} onPress={recording ? stopRecording : startRecording} />
           <Text style={{ color: colors.text, fontSize: 20, fontFamily: 'Manrope_700Bold' }}>
-            {recording ? 'Recording now...' : isTypedMode ? 'Type your meal below' : 'Tap the mic to start'}
+            {recording
+              ? 'Bezig met opnemen...'
+              : isGuestMode
+                ? 'Typ hieronder je maaltijd'
+                : isTypedMode
+                  ? 'Typ hieronder je maaltijd'
+                  : 'Tik op de microfoon om te starten'}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
             {recording
-              ? `${seconds}s captured`
+              ? `${seconds}s opgenomen`
+              : isGuestMode
+                ? 'Getypte invoer werkt volledig in gastmodus. Maak een account aan als je ook audio wilt transcriberen.'
               : isTypedMode
-                ? 'Quick-add mode skips recording and takes you straight into editable meal text.'
-                : 'Try: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
+                ? 'De snelle typmodus slaat opnemen over en brengt je direct naar bewerkbare maaltijdtekst.'
+                : 'Probeer: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
           </Text>
         </Card>
       </FadeInView>
       {transcriptionError ? (
         <InlineMessage
-          actionLabel={lastAudioUri ? 'Retry transcription' : 'Dismiss'}
-          description="This message comes directly from the transcription request, so it should help pinpoint auth or deployment issues."
+          actionLabel={lastAudioUri ? 'Opnieuw proberen' : 'Sluiten'}
+          description="Dit bericht komt direct uit het transcriptieverzoek en helpt bij het opsporen van auth- of deploymentproblemen."
           onActionPress={lastAudioUri ? retryTranscription : () => setTranscriptionError(null)}
           title={transcriptionError}
           tone="error"
@@ -155,8 +190,8 @@ export default function VoiceLogMealScreen() {
       ) : null}
       {error ? (
         <InlineMessage
-          actionLabel={lastAudioUri ? 'Retry transcription' : 'Dismiss'}
-          description="You can retry the last recording or edit the text manually and continue."
+          actionLabel={lastAudioUri ? 'Opnieuw proberen' : 'Sluiten'}
+          description="Je kunt de laatste opname opnieuw proberen of de tekst handmatig aanpassen en doorgaan."
           onActionPress={lastAudioUri ? retryTranscription : clearError}
           title={error}
           tone="error"
@@ -166,11 +201,11 @@ export default function VoiceLogMealScreen() {
       <TranscriptionEditor onChangeText={setDraftText} value={draftText} />
 
       <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Helpful examples</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Handige voorbeelden</Text>
         {[
           'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
-          'For lunch I had a chicken sandwich and an apple.',
-          'Dinner was rice with salmon and vegetables.',
+          'Voor lunch had ik een kipsandwich en een appel.',
+          'Als avondeten at ik rijst met zalm en groenten.',
         ].map((example) => (
           <View key={example} style={{ flexDirection: 'row', gap: 10 }}>
             <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
@@ -181,18 +216,22 @@ export default function VoiceLogMealScreen() {
 
       <PrimaryButton
         disabled={!draftText.trim()}
-        label={isTranscribing ? 'Transcribing...' : isAnalyzing ? 'Analyzing meal...' : 'Analyze meal'}
+        label={isTranscribing ? 'Transcriberen...' : isAnalyzing ? 'Maaltijd analyseren...' : 'Maaltijd analyseren'}
         loading={isTranscribing || isAnalyzing}
         onPress={onAnalyze}
       />
       <SecondaryButton
-        label={isTypedMode ? 'Switch to voice flow' : 'Use typed entry'}
+        label={isGuestMode ? 'Terug naar overzicht' : isTypedMode ? 'Ga terug naar steminvoer' : 'Gebruik getypte invoer'}
         onPress={() => {
+          if (isGuestMode) {
+            router.replace('/(tabs)');
+            return;
+          }
           if (isTypedMode) {
             router.replace('/meal/log');
             return;
           }
-          setDraftText(draftText || 'I had ');
+          setDraftText(draftText || 'Ik had ');
           router.replace('/meal/log?mode=typed');
         }}
         disabled={Boolean(recording)}

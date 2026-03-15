@@ -7,11 +7,14 @@ type SecondaryButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 };
 
-export const SecondaryButton = ({ label, onPress, disabled }: SecondaryButtonProps) => (
+export const SecondaryButton = ({ label, onPress, disabled, accessibilityLabel }: SecondaryButtonProps) => (
   <Pressable
+    accessibilityLabel={accessibilityLabel ?? label}
     accessibilityRole="button"
+    accessibilityState={{ disabled: Boolean(disabled) }}
     disabled={disabled}
     onPress={onPress}
     style={({ pressed }) => ({

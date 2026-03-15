@@ -10,9 +10,9 @@ type WeeklySummaryCardProps = {
 export const WeeklySummaryCard = ({ averages }: WeeklySummaryCardProps) => (
   <Card style={{ gap: 16 }}>
     <View style={{ gap: 4 }}>
-      <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Weekly overview</Text>
+      <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Weekoverzicht</Text>
       <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-        Chart scaffold for your next insight layer.
+        Grafiekopzet voor je volgende inzichtlaag.
       </Text>
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>

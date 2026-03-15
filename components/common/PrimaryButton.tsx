@@ -9,11 +9,14 @@ type PrimaryButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
+  accessibilityLabel?: string;
 };
 
-export const PrimaryButton = ({ label, onPress, disabled, loading, icon }: PrimaryButtonProps) => (
+export const PrimaryButton = ({ label, onPress, disabled, loading, icon, accessibilityLabel }: PrimaryButtonProps) => (
   <Pressable
+    accessibilityLabel={accessibilityLabel ?? label}
     accessibilityRole="button"
+    accessibilityState={{ busy: Boolean(loading), disabled: Boolean(disabled || loading) }}
     disabled={disabled || loading}
     onPress={onPress}
     style={({ pressed }) => ({

@@ -24,12 +24,12 @@ export const PremiumUpsellCard = ({ onPress }: PremiumUpsellCardProps) => (
         <Ionicons color={colors.secondary} name="sparkles" size={22} />
       </View>
       <View style={{ flex: 1, gap: 6 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Unlock AI coaching</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Ontgrendel AI-coaching</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
-          Get practical daily recommendations for fat loss, muscle gain, and healthier eating.
+          Krijg praktische dagelijkse aanbevelingen voor afvallen, spiergroei en gezonder eten.
         </Text>
       </View>
     </View>
-    <PrimaryButton label="Preview premium" onPress={onPress} />
+    <PrimaryButton label="Bekijk premium" onPress={onPress} />
   </Card>
 );

@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 const DEFAULT_TRANSCRIPTION_PROMPT =
-  'This is a nutrition tracking transcript. The user may speak Dutch or English and mention foods, brands, quantities, meal types, and nutrition-related words.';
+  'Dit is een transcript voor voedingstracking. De gebruiker kan Nederlands of Engels spreken en noemt mogelijk voedingsmiddelen, merken, hoeveelheden, maaltijdtypes en voedingsgerelateerde termen.';
 
 const guessMimeType = (uri: string) => {
   const lower = uri.toLowerCase();
@@ -34,7 +34,7 @@ const appendAudioFile = async (formData: FormData, audioUri: string) => {
 
 export const transcribeAudioWithOpenAI = async (audioUri: string) => {
   if (!isSupabaseConfigured) {
-    throw new Error('Supabase is not configured, so real transcription is unavailable.');
+    throw new Error('Supabase is niet ingesteld, dus echte transcriptie is niet beschikbaar.');
   }
 
   const formData = new FormData();
@@ -50,7 +50,7 @@ export const transcribeAudioWithOpenAI = async (audioUri: string) => {
   });
 
   if (!response.ok) {
-    let detail = 'The transcription service request failed.';
+    let detail = 'Het verzoek naar de transcriptieservice is mislukt.';
     let errorSummary = '';
     try {
       const body = await response.json();
@@ -65,19 +65,19 @@ export const transcribeAudioWithOpenAI = async (audioUri: string) => {
 
     if (response.status === 401) {
       throw new Error(
-        `Transcription request failed with 401 Unauthorized. ${errorSummary ? `${errorSummary} ` : ''}${detail} If this mentions OpenAI, check the OPENAI_API_KEY secret in Supabase. If it mentions JWT, redeploy the function with JWT verification disabled.`,
+        `Transcriptieverzoek mislukte met 401 Unauthorized. ${errorSummary ? `${errorSummary} ` : ''}${detail} Als dit over OpenAI gaat, controleer dan het OPENAI_API_KEY-secret in Supabase. Als dit over JWT gaat, deploy de functie opnieuw met uitgeschakelde JWT-verificatie.`,
       );
     }
 
     throw new Error(
-      `Transcription request failed (${response.status} ${response.statusText}). ${errorSummary ? `${errorSummary} ` : ''}${detail}`,
+      `Transcriptieverzoek mislukt (${response.status} ${response.statusText}). ${errorSummary ? `${errorSummary} ` : ''}${detail}`,
     );
   }
 
   const data = (await response.json()) as { text?: string };
 
   if (!data.text?.trim()) {
-    throw new Error('OpenAI transcription returned empty text.');
+    throw new Error('OpenAI transcriptie gaf geen tekst terug.');
   }
 
   return data.text.trim();

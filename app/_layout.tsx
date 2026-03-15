@@ -30,7 +30,7 @@ function BootScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 14 }}>
       <ActivityIndicator color={colors.primary} size="large" />
-      <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Preparing NutriVoice...</Text>
+      <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>NutriVoice wordt gestart...</Text>
     </View>
   );
 }
@@ -70,8 +70,7 @@ export default function RootLayout() {
       return;
     }
 
-    loadProfile(session.userId, session.email);
-    loadMeals(session.userId);
+    void Promise.allSettled([loadProfile(session.userId, session.email), loadMeals(session.userId)]);
   }, [clearProfile, loadMeals, loadProfile, session]);
 
   useEffect(() => {
@@ -119,6 +118,7 @@ export default function RootLayout() {
         <Stack.Screen name="meal/[id]" />
         <Stack.Screen name="meal/edit/[id]" />
         <Stack.Screen name="day/[date]" />
+        <Stack.Screen name="premium/coming-soon" />
       </Stack>
     </ThemeProvider>
   );

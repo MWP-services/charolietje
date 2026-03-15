@@ -53,6 +53,26 @@ The app runs in two modes:
 - Expo Linear Gradient
 - Expo Network
 
+## Mobile and store readiness
+
+The app is now configured phone-first and closer to submission-ready defaults:
+
+- Portrait-only orientation
+- Safer keyboard handling on long mobile forms
+- Bottom tabs that respect safe-area insets and hide while typing
+- Microphone permission string configured through Expo config
+- iOS and Android package identifiers configured
+- Runtime version policy set for safer updates
+- iOS non-exempt encryption flag configured
+- Tablet support disabled for now so store review matches the current phone-first UX
+
+Current IDs in `app.json`:
+
+- iOS bundle identifier: `com.nutrivoice.app`
+- Android package: `com.nutrivoice.app`
+
+If you already have final production IDs, replace these before the first store upload.
+
 ## File structure
 
 ```text
@@ -235,18 +255,34 @@ Relevant TODO comments are already placed in those files.
 
 ## Suggested next steps
 
-1. Connect real speech-to-text.
-2. Replace the parser with an LLM prompt or structured extraction endpoint.
-3. Replace nutrition mocks with a verified food database.
-4. Move premium advice generation to a backend service.
-5. Add real subscription entitlements.
+1. Replace placeholder store assets with final branded icon, splash, and screenshots.
+2. Replace nutrition mocks with a verified food database.
+3. Move premium advice generation to a backend service.
+4. Add real subscription entitlements.
+5. Add production analytics, crash reporting, and moderation-safe API monitoring.
 
 ## Notes about the current MVP
 
-- Audio recording is real, transcription is mocked
-- Meal parsing and nutrition lookup are mocked but typed and service-based
+- Audio recording is real, and transcription can use the Supabase Edge Function + OpenAI path when configured
+- Meal parsing can use the Supabase Edge Function + OpenAI path when configured
+- Nutrition lookup is still mock/service-based
 - Supabase integration is real when environment variables are configured
 - In mock mode the app seeds realistic meals so dashboard and history feel complete immediately
+
+## Manual app store checklist
+
+These items still need real product/business inputs before a real App Store or Play Store submission:
+
+- Replace placeholder bundle/package IDs if you want your own final production identifiers
+- Replace app icon, adaptive icon, splash image, screenshots, and promotional artwork with final branded assets
+- Prepare a privacy policy URL and support URL
+- Prepare store listing copy in Dutch and/or English
+- Decide whether premium is hidden, marked as coming soon, or fully removed for the first review build
+- Create reviewer notes describing:
+  - guest mode
+  - microphone usage for meal recording
+  - test credentials if premium or auth flows need review access
+- Validate that all external links, legal copy, and account deletion expectations match store policy
 
 ## Important local environment note
 

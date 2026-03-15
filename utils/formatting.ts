@@ -18,16 +18,87 @@ export const formatNutrientValue = (label: string, value: number) => {
   return formatGrams(value);
 };
 
-export const formatMealType = (mealType: string) =>
-  mealType.charAt(0).toUpperCase() + mealType.slice(1).replace('_', ' ');
+export const formatMealType = (mealType: string) => {
+  switch (mealType) {
+    case 'breakfast':
+      return 'Ontbijt';
+    case 'lunch':
+      return 'Lunch';
+    case 'dinner':
+      return 'Avondeten';
+    case 'snack':
+      return 'Snack';
+    default:
+      return 'Onbekend';
+  }
+};
 
 export const formatGoal = (goal: GoalType) => {
   switch (goal) {
     case 'lose_weight':
-      return 'Lose weight';
+      return 'Afvallen';
     case 'build_muscle':
-      return 'Build muscle';
+      return 'Spieren opbouwen';
     default:
-      return 'Maintain weight';
+      return 'Gewicht behouden';
+  }
+};
+
+export const formatFoodName = (name: string) => {
+  switch (name.toLowerCase()) {
+    case 'bread':
+      return 'Brood';
+    case 'peanut butter':
+      return 'Pindakaas';
+    case 'semi-skimmed milk':
+      return 'Halfvolle melk';
+    case 'chicken sandwich':
+      return 'Kipsandwich';
+    case 'apple':
+      return 'Appel';
+    case 'banana':
+      return 'Banaan';
+    case 'rice':
+      return 'Rijst';
+    case 'salmon':
+      return 'Zalm';
+    case 'vegetables':
+      return 'Groenten';
+    case 'protein yogurt':
+      return 'Proteineyoghurt';
+    case 'oats':
+      return 'Havermout';
+    case 'egg':
+      return 'Ei';
+    case 'avocado':
+      return 'Avocado';
+    case 'pasta':
+      return 'Pasta';
+    case 'olive oil':
+      return 'Olijfolie';
+    case 'liverwurst':
+      return 'Leverworst';
+    case 'stroopwafel':
+      return 'Stroopwafel';
+    default:
+      return name;
+  }
+};
+
+export const formatUnit = (unit: string) => {
+  switch (unit.toLowerCase()) {
+    case 'slice':
+    case 'slices':
+      return 'sneetjes';
+    case 'piece':
+      return 'stuk';
+    case 'gram':
+      return 'gram';
+    case 'ml':
+      return 'ml';
+    case 'serving':
+      return 'portie';
+    default:
+      return unit;
   }
 };

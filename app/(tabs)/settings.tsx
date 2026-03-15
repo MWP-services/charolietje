@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { z } from 'zod';
 
 import { AppHeader } from '@/components/common/AppHeader';
@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { GoalSelector } from '@/components/settings/GoalSelector';
 import { SettingsRow } from '@/components/settings/SettingsRow';
+import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useAuthStore } from '@/store/authStore';
 import { useProfileStore } from '@/store/profileStore';
 import type { GoalType } from '@/types/profile';
@@ -19,7 +20,8 @@ type SettingsValues = z.input<typeof settingsSchema>;
 
 export default function ProfileSettingsScreen() {
   const { signOut } = useAuthStore();
-  const { profile, updateProfile } = useProfileStore();
+  const { profile, updateProfile, isLoading } = useProfileStore();
+  const { isRefreshing, refresh } = useAppDataRefresh();
   const {
     control,
     handleSubmit,
@@ -40,24 +42,24 @@ export default function ProfileSettingsScreen() {
         calorie_target: values.calorieTarget ? Number(values.calorieTarget) : null,
         protein_target: values.proteinTarget ? Number(values.proteinTarget) : null,
       });
-      Alert.alert('Saved', 'Your settings were updated.');
+      Alert.alert('Opgeslagen', 'Je instellingen zijn bijgewerkt.');
     } catch (error) {
-      Alert.alert('Save failed', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Opslaan mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
     }
   });
 
   return (
-    <ScreenContainer>
-      <AppHeader subtitle="Profile, targets, premium mode, and account actions." title="Settings" />
+    <ScreenContainer loading={isLoading && !profile} loadingLabel="Je instellingen worden geladen..." onRefresh={refresh} refreshing={isRefreshing}>
+      <AppHeader subtitle="Profiel, doelen, premiummodus en accountacties." title="Instellingen" />
       <Card style={{ gap: 16 }}>
         <Controller
           control={control}
           name="fullName"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.fullName?.message} label="Name" onChangeText={onChange} value={value} />
+            <FormField autoComplete="name" label="Naam" error={errors.fullName?.message} onChangeText={onChange} textContentType="name" value={value} />
           )}
         />
-        <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 14 }}>Goal</Text>
+        <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 14 }}>Doel</Text>
         <GoalSelector
           onChange={(goal) => {
             updateProfile({ goal: goal as GoalType });
@@ -68,30 +70,30 @@ export default function ProfileSettingsScreen() {
           control={control}
           name="calorieTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.calorieTarget?.message} keyboardType="numeric" label="Calorie target" onChangeText={onChange} value={value ?? ''} />
+            <FormField error={errors.calorieTarget?.message} inputMode="numeric" keyboardType="numeric" label="Caloriedoel" onChangeText={onChange} value={value ?? ''} />
           )}
         />
         <Controller
           control={control}
           name="proteinTarget"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.proteinTarget?.message} keyboardType="numeric" label="Protein target" onChangeText={onChange} value={value ?? ''} />
+            <FormField error={errors.proteinTarget?.message} inputMode="numeric" keyboardType="numeric" label="Eiwitdoel" onChangeText={onChange} value={value ?? ''} />
           )}
         />
-        <PrimaryButton label="Save settings" loading={isSubmitting} onPress={onSubmit} />
+        <PrimaryButton label="Instellingen opslaan" loading={isSubmitting} onPress={onSubmit} />
       </Card>
 
       <Card>
         <SettingsRow
-          description="Enable premium features in mock mode for testing."
+          description="Schakel premiumfuncties in testmodus in."
           onSwitchChange={(value) => updateProfile({ is_premium: value })}
           switchValue={profile?.is_premium ?? false}
-          title="Premium mock toggle"
+          title="Premium testschakelaar"
         />
-        <SettingsRow rightText={profile?.email ?? 'No email'} title="Account" />
+        <SettingsRow rightText={profile?.email ?? 'Geen e-mail'} title="Account" />
       </Card>
 
-      <PrimaryButton label="Log out" onPress={() => signOut()} />
+      <PrimaryButton label="Uitloggen" onPress={() => signOut()} />
     </ScreenContainer>
   );
 }

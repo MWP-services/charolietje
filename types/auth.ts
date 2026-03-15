@@ -1,5 +1,5 @@
 export type AppSession = {
   userId: string;
   email: string | null;
-  provider: 'supabase' | 'mock';
+  provider: 'supabase' | 'mock' | 'guest';
 };

@@ -19,9 +19,9 @@ export const OfflineBanner = () => (
     }}>
     <Ionicons color={colors.warning} name="cloud-offline-outline" size={18} style={{ marginTop: 1 }} />
     <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ color: colors.text, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>You’re offline</Text>
+      <Text style={{ color: colors.text, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>Je bent offline</Text>
       <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, fontFamily: 'Manrope_500Medium' }}>
-        Local screens still work, but synced saves and future cloud AI features may be limited until you reconnect.
+        Lokale schermen blijven werken, maar gesynchroniseerde saves en toekomstige cloud-AI kunnen beperkt zijn tot je weer verbinding hebt.
       </Text>
     </View>
   </View>

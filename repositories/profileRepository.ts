@@ -5,6 +5,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { UserProfile } from '@/types/profile';
 
 const profileKey = (userId: string) => `nutrivoice:mock-profile:${userId}`;
+const shouldUseMockProfileStorage = (userId: string) => userId.startsWith('mock_') || userId.startsWith('guest_');
 
 const ensureMockProfile = async (userId: string, email?: string | null) => {
   const raw = await AsyncStorage.getItem(profileKey(userId));
@@ -19,7 +20,7 @@ const ensureMockProfile = async (userId: string, email?: string | null) => {
 
 export const profileRepository = {
   async getProfile(userId: string, email?: string | null) {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && !shouldUseMockProfileStorage(userId)) {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -40,7 +41,7 @@ export const profileRepository = {
           ((typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name) ||
             (typeof user?.user_metadata?.name === 'string' && user.user_metadata.name) ||
             email?.split('@')[0] ||
-            'NutriVoice User') as string,
+            'NutriVoice gebruiker') as string,
         email: email ?? user?.email ?? undefined,
         is_premium: false,
         has_completed_onboarding: false,
@@ -59,7 +60,7 @@ export const profileRepository = {
   },
 
   async upsertProfile(profile: UserProfile) {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && !shouldUseMockProfileStorage(profile.id)) {
       const { data, error } = await supabase.from('profiles').upsert(profile).select().single();
       if (error) {
         throw error;

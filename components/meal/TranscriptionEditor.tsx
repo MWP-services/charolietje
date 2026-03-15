@@ -11,11 +11,11 @@ type TranscriptionEditorProps = {
 
 export const TranscriptionEditor = ({ value, onChangeText }: TranscriptionEditorProps) => (
   <Card style={{ gap: 12 }}>
-    <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Review transcript</Text>
+    <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Controleer transcriptie</Text>
     <TextInput
       multiline
       onChangeText={onChangeText}
-      placeholder="Describe what you ate..."
+      placeholder="Beschrijf wat je hebt gegeten..."
       placeholderTextColor={colors.textMuted}
       style={{
         minHeight: 140,

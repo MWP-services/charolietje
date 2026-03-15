@@ -27,10 +27,10 @@ export const MealCard = ({ meal, onPress }: MealCardProps) => (
       </Text>
       <View style={{ flexDirection: 'row', gap: 14 }}>
         <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-          {Math.round(meal.total_protein)}g protein
+          {Math.round(meal.total_protein)}g eiwit
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-          {meal.items.length} items
+          {meal.items.length} producten
         </Text>
       </View>
     </Card>

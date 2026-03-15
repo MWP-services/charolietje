@@ -5,9 +5,12 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FadeInView } from '@/components/common/FadeInView';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SectionHeader } from '@/components/common/SectionHeader';
+import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealCard } from '@/components/dashboard/MealCard';
+import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
@@ -19,11 +22,19 @@ export default function DayDetailScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const session = useAuthStore((state) => state.session);
   const profile = useProfileStore((state) => state.profile);
+  const isMealsLoading = useMealStore((state) => state.isLoading);
   const meals = useMealStore((state) => state.meals.filter((meal) => meal.date === date));
   const deleteMeal = useMealStore((state) => state.deleteMeal);
+  const { isRefreshing, refresh } = useAppDataRefresh();
 
   if (!date) {
-    return null;
+    return (
+      <ScreenContainer>
+        <AppHeader showBackButton subtitle="We konden deze dag niet laden." title="Dag niet gevonden" />
+        <EmptyState description="Open een dag vanuit je historie of dashboard om de totalen en maaltijden te bekijken." title="Geen geldige datum" />
+        <PrimaryButton label="Naar historie" onPress={() => router.replace('/(tabs)/history')} />
+      </ScreenContainer>
+    );
   }
 
   const totals = calculateDayTotals(date, meals);
@@ -31,22 +42,22 @@ export default function DayDetailScreen() {
   const proteinProgress = calculateProgress(totals.protein, profile?.protein_target ?? null);
 
   return (
-    <ScreenContainer>
-      <AppHeader showBackButton subtitle="Daily totals and meal log detail" title={formatLongDate(date)} />
+    <ScreenContainer loading={isMealsLoading && !meals.length} loadingLabel="Dagdetails worden geladen..." onRefresh={refresh} refreshing={isRefreshing}>
+      <AppHeader showBackButton subtitle="Dagtotalen en details van je maaltijden" title={formatLongDate(date)} />
       <FadeInView delay={20}>
         <Card style={{ gap: 12 }}>
-          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Total daily nutrients</Text>
+          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Totale voedingswaarden van de dag</Text>
           <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(totals.calories)} kcal • {Math.round(totals.protein)}g protein • {Math.round(totals.carbs)}g carbs • {Math.round(totals.fat)}g fat
+            {Math.round(totals.calories)} kcal - {Math.round(totals.protein)}g eiwit - {Math.round(totals.carbs)}g koolhydraten - {Math.round(totals.fat)}g vet
           </Text>
           <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            Fiber {Math.round(totals.fiber)}g • Sugar {Math.round(totals.sugar)}g • Sodium {Math.round(totals.sodium)}mg
+            Vezels {Math.round(totals.fiber)}g - Suiker {Math.round(totals.sugar)}g - Natrium {Math.round(totals.sodium)}mg
           </Text>
-          <Text style={{ fontFamily: 'Manrope_600SemiBold' }}>Goal progress: {calorieProgress}% calories • {proteinProgress}% protein</Text>
+          <Text style={{ fontFamily: 'Manrope_600SemiBold' }}>Doelvoortgang: {calorieProgress}% calorieen - {proteinProgress}% eiwit</Text>
         </Card>
       </FadeInView>
 
-      <SectionHeader subtitle="Tap into any meal for detail or editing." title="Meals" />
+      <SectionHeader subtitle="Tik op een maaltijd voor details of om te bewerken." title="Maaltijden" />
       {meals.length ? (
         <View style={{ gap: 14 }}>
           {meals.map((meal, index) => (
@@ -55,24 +66,30 @@ export default function DayDetailScreen() {
                 <MealCard meal={meal} onPress={() => router.push(`/meal/${meal.id}`)} />
                 <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 6 }}>
                   <Pressable onPress={() => router.push(`/meal/edit/${meal.id}`)}>
-                    <Text style={{ fontFamily: 'Manrope_700Bold' }}>Edit meal</Text>
+                    <Text style={{ fontFamily: 'Manrope_700Bold' }}>Maaltijd bewerken</Text>
                   </Pressable>
                   <Pressable
                     onPress={() =>
-                      Alert.alert('Delete meal', 'Remove this meal from the selected day?', [
-                        { text: 'Cancel', style: 'cancel' },
+                      Alert.alert('Maaltijd verwijderen', 'Deze maaltijd van de geselecteerde dag verwijderen?', [
+                        { text: 'Annuleren', style: 'cancel' },
                         {
-                          text: 'Delete',
+                          text: 'Verwijderen',
                           style: 'destructive',
                           onPress: async () => {
-                            if (session) {
+                            if (!session) {
+                              return;
+                            }
+
+                            try {
                               await deleteMeal(session.userId, meal.id);
+                            } catch (error) {
+                              Alert.alert('Verwijderen mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
                             }
                           },
                         },
                       ])
                     }>
-                    <Text style={{ color: '#E85D75', fontFamily: 'Manrope_700Bold' }}>Delete meal</Text>
+                    <Text style={{ color: '#E85D75', fontFamily: 'Manrope_700Bold' }}>Maaltijd verwijderen</Text>
                   </Pressable>
                 </View>
               </View>
@@ -80,7 +97,11 @@ export default function DayDetailScreen() {
           ))}
         </View>
       ) : (
-        <EmptyState description="This day has no saved meals yet." title="No meals on this day" />
+        <>
+          <EmptyState description="Er zijn nog geen opgeslagen maaltijden op deze dag. Voeg een nieuwe maaltijd toe of kies een andere dag in je historie." title="Geen maaltijden op deze dag" />
+          <PrimaryButton label="Nieuwe maaltijd loggen" onPress={() => router.push('/meal/log?mode=typed')} />
+          <SecondaryButton label="Terug naar historie" onPress={() => router.replace('/(tabs)/history')} />
+        </>
       )}
     </ScreenContainer>
   );

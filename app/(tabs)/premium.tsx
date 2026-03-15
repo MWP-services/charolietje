@@ -5,21 +5,25 @@ import { Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
-import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { Tag } from '@/components/common/Tag';
 import { PremiumUpsellCard } from '@/components/premium/PremiumUpsellCard';
 import { colors } from '@/constants/colors';
+import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useDailyTotals } from '@/hooks/useDailyTotals';
 import { useMeals } from '@/hooks/useMeals';
 import { premiumAdviceService } from '@/services/premium/premiumAdviceService';
+import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
 
 export default function PremiumAdviceScreen() {
   const router = useRouter();
   const profile = useProfileStore((state) => state.profile);
+  const isProfileLoading = useProfileStore((state) => state.isLoading);
+  const isMealsLoading = useMealStore((state) => state.isLoading);
+  const { isRefreshing, refresh } = useAppDataRefresh();
   const totals = useDailyTotals();
   const meals = useMeals();
   const [isLoading, setIsLoading] = useState(false);
@@ -57,25 +61,29 @@ export default function PremiumAdviceScreen() {
   }, [meals, profile, totals]);
 
   return (
-    <ScreenContainer>
-      <AppHeader subtitle="Goal-specific nutrition guidance powered by the current day." title="Premium advice" />
+    <ScreenContainer
+      loading={isLoading || isProfileLoading || (isMealsLoading && !meals.length)}
+      loadingLabel="Premiuminzichten worden geladen..."
+      onRefresh={refresh}
+      refreshing={isRefreshing}>
+      <AppHeader subtitle="Voedingsadvies op basis van je doel en je huidige dag." title="Premium advies" />
 
       {!profile?.is_premium ? (
         <View style={{ gap: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Tag label="Premium locked" tone="warning" />
+            <Tag label="Premium vergrendeld" tone="warning" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              Upgrade to unlock coaching
+              Upgrade om coaching te ontgrendelen
             </Text>
           </View>
-          <PremiumUpsellCard onPress={() => router.push('/(tabs)/settings')} />
+          <PremiumUpsellCard onPress={() => router.push('/premium/coming-soon')} />
           <Card style={{ gap: 14 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>What premium unlocks</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Wat premium vrijspeelt</Text>
             {[
-              'Daily AI recommendations tailored to fat loss, maintenance, or muscle gain',
-              'Pattern-based warnings like low protein, low fiber, or snack-heavy intake',
-              'Strength callouts so users know what habits are already working',
-              'Future-ready coaching architecture for subscriptions and richer analysis',
+              'Dagelijkse AI-aanbevelingen voor afvallen, behoud of spieropbouw',
+              'Patroongestuurde waarschuwingen zoals weinig eiwit, weinig vezels of veel snacks',
+              'Sterke punten zodat je weet welke gewoontes al goed werken',
+              'Een coachingarchitectuur die klaar is voor abonnementen en rijkere analyse',
             ].map((item) => (
               <View key={item} style={{ flexDirection: 'row', gap: 10 }}>
                 <Ionicons color={colors.secondary} name="sparkles-outline" size={18} />
@@ -83,45 +91,45 @@ export default function PremiumAdviceScreen() {
               </View>
             ))}
           </Card>
-          <PrimaryButton label="Enable premium mock mode" onPress={() => router.push('/(tabs)/settings')} />
+          <PrimaryButton label="Schakel premium testmodus in" onPress={() => router.push('/(tabs)/settings')} />
         </View>
       ) : (
         <View style={{ gap: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Tag label="Premium active" tone="primary" />
+            <Tag label="Premium actief" tone="primary" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              Coaching is using your current goal and recent meals
+              Coaching gebruikt je huidige doel en recente maaltijden
             </Text>
           </View>
           <Card style={{ gap: 8 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Today’s analysis</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Analyse van vandaag</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
-              {advice?.summary ?? 'Generating your premium recommendations...'}
+              {advice?.summary ?? 'Je premium aanbevelingen worden gegenereerd...'}
             </Text>
           </Card>
 
-          <SectionHeader title="Recommendations" />
+          <SectionHeader title="Aanbevelingen" />
           {advice?.goal_specific_tips.map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>
             </Card>
           ))}
 
-          <SectionHeader title="Strengths" />
+          <SectionHeader title="Sterke punten" />
           {advice?.strengths.map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>
             </Card>
           ))}
 
-          <SectionHeader title="Warning areas" />
-          {(advice?.warnings.length ? advice.warnings : ['No major warning flags right now.']).map((tip) => (
+          <SectionHeader title="Aandachtspunten" />
+          {(advice?.warnings.length ? advice.warnings : ['Er zijn nu geen grote waarschuwingssignalen.']).map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>
             </Card>
           ))}
 
-          <SectionHeader title="Improvement ideas" />
+          <SectionHeader title="Verbeterideeën" />
           {advice?.improvements.map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>
@@ -129,7 +137,6 @@ export default function PremiumAdviceScreen() {
           ))}
         </View>
       )}
-      <LoadingOverlay label="Analyzing your day..." visible={isLoading} />
     </ScreenContainer>
   );
 }

@@ -41,26 +41,46 @@ export default function RegisterScreen() {
       await signUp(values);
       router.replace('/(onboarding)/goals');
     } catch (submitError) {
-      Alert.alert('Sign up failed', submitError instanceof Error ? submitError.message : 'Please try again.');
+      Alert.alert('Registratie mislukt', submitError instanceof Error ? submitError.message : 'Probeer het opnieuw.');
     }
   });
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader showBackButton subtitle="Create your account and start tracking with your voice." title="Create account" />
+      <AppHeader showBackButton subtitle="Maak je account aan en begin met tracken via je stem." title="Account aanmaken" />
       <View style={{ gap: 18 }}>
         <Controller
           control={control}
           name="fullName"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.fullName?.message} label="Full name" onChangeText={onChange} placeholder="Your name" value={value} />
+            <FormField
+              autoComplete="name"
+              error={errors.fullName?.message}
+              label="Volledige naam"
+              onChangeText={onChange}
+              placeholder="Jouw naam"
+              returnKeyType="next"
+              textContentType="name"
+              value={value}
+            />
           )}
         />
         <Controller
           control={control}
           name="email"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.email?.message} label="Email" onChangeText={onChange} placeholder="you@example.com" value={value} />
+            <FormField
+              autoCapitalize="none"
+              autoComplete="email"
+              error={errors.email?.message}
+              inputMode="email"
+              label="E-mail"
+              onChangeText={onChange}
+              placeholder="jij@voorbeeld.com"
+              returnKeyType="next"
+              textContentType="emailAddress"
+              value={value}
+            />
           )}
         />
         <Controller
@@ -68,11 +88,15 @@ export default function RegisterScreen() {
           name="password"
           render={({ field: { onChange, value } }) => (
             <FormField
+              autoCapitalize="none"
+              autoComplete="new-password"
               error={errors.password?.message}
-              label="Password"
+              label="Wachtwoord"
               onChangeText={onChange}
-              placeholder="Minimum 8 characters"
+              placeholder="Minimaal 8 tekens"
+              returnKeyType="next"
               secureTextEntry
+              textContentType="newPassword"
               value={value}
             />
           )}
@@ -82,22 +106,26 @@ export default function RegisterScreen() {
           name="confirmPassword"
           render={({ field: { onChange, value } }) => (
             <FormField
+              autoCapitalize="none"
+              autoComplete="new-password"
               error={errors.confirmPassword?.message}
-              label="Confirm password"
+              label="Bevestig wachtwoord"
               onChangeText={onChange}
-              placeholder="Repeat password"
+              placeholder="Herhaal wachtwoord"
+              returnKeyType="done"
               secureTextEntry
+              textContentType="newPassword"
               value={value}
             />
           )}
         />
       </View>
       {error ? <Text style={{ color: colors.danger, fontFamily: 'Manrope_600SemiBold' }}>{error}</Text> : null}
-      <PrimaryButton label="Create account" loading={isSubmitting} onPress={onSubmit} />
+      <PrimaryButton label="Account aanmaken" loading={isSubmitting} onPress={onSubmit} />
       <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
-        Already have an account?{' '}
+        Heb je al een account?{' '}
         <Link href="/(auth)/login" style={{ color: colors.secondary, fontFamily: 'Manrope_700Bold' }}>
-          Log in
+          Inloggen
         </Link>
       </Text>
     </ScreenContainer>

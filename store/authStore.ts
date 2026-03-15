@@ -10,6 +10,7 @@ type AuthState = {
   initialize: () => Promise<void>;
   signIn: (input: { email: string; password: string }) => Promise<AppSession>;
   signUp: (input: { fullName: string; email: string; password: string }) => Promise<AppSession>;
+  continueAsGuest: () => Promise<AppSession>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
@@ -32,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Unable to restore session',
+        error: error instanceof Error ? error.message : 'Sessie herstellen mislukt',
         isInitializing: false,
       });
     }
@@ -43,7 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ session, error: null });
       return session;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to sign in';
+      const message = error instanceof Error ? error.message : 'Inloggen mislukt';
       set({ error: message });
       throw error;
     }
@@ -54,7 +55,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ session, error: null });
       return session;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create account';
+      const message = error instanceof Error ? error.message : 'Account aanmaken mislukt';
+      set({ error: message });
+      throw error;
+    }
+  },
+  async continueAsGuest() {
+    try {
+      const session = await authService.continueAsGuest();
+      set({ session, error: null });
+      return session;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gastmodus starten mislukt';
       set({ error: message });
       throw error;
     }

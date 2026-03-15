@@ -1,12 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { FormField } from '@/components/common/FormField';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
+import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { colors } from '@/constants/colors';
 import { useAuthStore } from '@/store/authStore';
 import { loginSchema } from '@/utils/validation';
@@ -18,7 +20,8 @@ type LoginValues = {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, error, clearError } = useAuthStore();
+  const { signIn, continueAsGuest, error, clearError } = useAuthStore();
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const {
     control,
     handleSubmit,
@@ -37,19 +40,43 @@ export default function LoginScreen() {
       await signIn(values);
       router.replace('/(tabs)');
     } catch (submitError) {
-      Alert.alert('Login failed', submitError instanceof Error ? submitError.message : 'Please try again.');
+      Alert.alert('Inloggen mislukt', submitError instanceof Error ? submitError.message : 'Probeer het opnieuw.');
     }
   });
 
+  const onContinueAsGuest = async () => {
+    clearError();
+    try {
+      setIsGuestLoading(true);
+      await continueAsGuest();
+      router.replace('/(tabs)');
+    } catch (guestError) {
+      Alert.alert('Gastmodus mislukt', guestError instanceof Error ? guestError.message : 'Probeer het opnieuw.');
+    } finally {
+      setIsGuestLoading(false);
+    }
+  };
+
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader showBackButton subtitle="Welcome back to smarter nutrition tracking." title="Log in" />
+      <AppHeader showBackButton subtitle="Welkom terug bij slimmer voeding tracken." title="Inloggen" />
       <View style={{ gap: 18 }}>
         <Controller
           control={control}
           name="email"
           render={({ field: { onChange, value } }) => (
-            <FormField error={errors.email?.message} label="Email" onChangeText={onChange} placeholder="you@example.com" value={value} />
+            <FormField
+              autoCapitalize="none"
+              autoComplete="email"
+              inputMode="email"
+              error={errors.email?.message}
+              label="E-mail"
+              onChangeText={onChange}
+              placeholder="jij@voorbeeld.com"
+              returnKeyType="next"
+              textContentType="emailAddress"
+              value={value}
+            />
           )}
         />
         <Controller
@@ -57,22 +84,30 @@ export default function LoginScreen() {
           name="password"
           render={({ field: { onChange, value } }) => (
             <FormField
+              autoCapitalize="none"
+              autoComplete="current-password"
               error={errors.password?.message}
-              label="Password"
+              label="Wachtwoord"
               onChangeText={onChange}
-              placeholder="Minimum 8 characters"
+              placeholder="Minimaal 8 tekens"
+              returnKeyType="done"
               secureTextEntry
+              textContentType="password"
               value={value}
             />
           )}
         />
       </View>
       {error ? <Text style={{ color: colors.danger, fontFamily: 'Manrope_600SemiBold' }}>{error}</Text> : null}
-      <PrimaryButton label="Log in" loading={isSubmitting} onPress={onSubmit} />
+      <PrimaryButton label="Inloggen" loading={isSubmitting} onPress={onSubmit} />
+      <SecondaryButton label={isGuestLoading ? 'Gastmodus openen...' : 'Ga verder als gast'} onPress={onContinueAsGuest} disabled={isSubmitting || isGuestLoading} />
+      <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
+        In gastmodus kun je de app gebruiken en maaltijden typen, maar spraaktranscriptie is uitgeschakeld.
+      </Text>
       <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
-        New here?{' '}
+        Nieuw hier?{' '}
         <Link href="/(auth)/register" style={{ color: colors.secondary, fontFamily: 'Manrope_700Bold' }}>
-          Create an account
+          Maak een account aan
         </Link>
       </Text>
     </ScreenContainer>

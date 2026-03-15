@@ -23,7 +23,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       set({ profile, isLoading: false });
       return profile;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load profile';
+      const message = error instanceof Error ? error.message : 'Profiel laden mislukt';
       set({ isLoading: false, error: message });
       throw error;
     }
@@ -31,7 +31,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   async updateProfile(updates) {
     const current = get().profile;
     if (!current) {
-      throw new Error('No profile loaded');
+      throw new Error('Er is geen profiel geladen');
     }
 
     set({ isLoading: true, error: null });
@@ -40,7 +40,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       set({ profile: next, isLoading: false });
       return next;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update profile';
+      const message = error instanceof Error ? error.message : 'Profiel bijwerken mislukt';
       set({ isLoading: false, error: message });
       throw error;
     }

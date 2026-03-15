@@ -14,11 +14,13 @@ import { StreakCard } from '@/components/dashboard/StreakCard';
 import { WeeklySummaryCard } from '@/components/dashboard/WeeklySummaryCard';
 import { PremiumUpsellCard } from '@/components/premium/PremiumUpsellCard';
 import { colors } from '@/constants/colors';
+import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useDailyTotals } from '@/hooks/useDailyTotals';
 import { useMeals } from '@/hooks/useMeals';
+import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
-import { getTodayIsoDate, getLastNDates } from '@/utils/date';
+import { getLastNDates, getTodayIsoDate } from '@/utils/date';
 import { formatCalories } from '@/utils/formatting';
 
 const getStreak = (dates: string[]) => {
@@ -41,13 +43,18 @@ const getStreak = (dates: string[]) => {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const session = useAuthStore((state) => state.session);
   const setDraftText = useMealStore((state) => state.setDraftText);
+  const isMealsLoading = useMealStore((state) => state.isLoading);
   const profile = useProfileStore((state) => state.profile);
+  const isProfileLoading = useProfileStore((state) => state.isLoading);
+  const { isRefreshing, refresh } = useAppDataRefresh();
   const totals = useDailyTotals();
   const todayMeals = useMeals(getTodayIsoDate());
   const allMeals = useMeals();
   const streak = getStreak([...new Set(allMeals.map((meal) => meal.date))]);
   const last7Dates = getLastNDates(7);
+  const isGuestMode = session?.provider === 'guest';
 
   const weeklyAverages = last7Dates.map((date) => {
     const mealsForDay = allMeals.filter((meal) => meal.date === date);
@@ -59,24 +66,28 @@ export default function DashboardScreen() {
   });
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      loading={isProfileLoading || (isMealsLoading && !allMeals.length)}
+      loadingLabel="Je dashboard wordt geladen..."
+      onRefresh={refresh}
+      refreshing={isRefreshing}>
       <View style={{ gap: 8 }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold', letterSpacing: 0.6 }}>TODAY</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold', letterSpacing: 0.6 }}>VANDAAG</Text>
         <Text style={{ color: colors.text, fontSize: 31, lineHeight: 38, fontFamily: 'Manrope_800ExtraBold' }}>
-          Hi {profile?.full_name?.split(' ')[0] ?? 'there'}, your nutrition snapshot is ready.
+          Hoi {profile?.full_name?.split(' ')[0] ?? 'daar'}, je voedingsoverzicht staat klaar.
         </Text>
       </View>
 
       <View style={{ gap: 12 }}>
         <PrimaryButton
           icon={<Ionicons color={colors.surface} name="mic" size={18} />}
-          label="Log meal with voice"
-          onPress={() => router.push('/meal/log')}
+          label={isGuestMode ? 'Maaltijd toevoegen' : 'Maaltijd loggen met stem'}
+          onPress={() => router.push(isGuestMode ? '/meal/log?mode=typed' : '/meal/log')}
         />
         <Pressable
           accessibilityRole="button"
           onPress={() => {
-            setDraftText('I had ');
+            setDraftText('Ik had ');
             router.push('/meal/log?mode=typed');
           }}
           style={{
@@ -88,55 +99,55 @@ export default function DashboardScreen() {
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>Quick add typed meal</Text>
+          <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>Snel een getypte maaltijd toevoegen</Text>
         </Pressable>
       </View>
 
       <StreakCard days={streak} />
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard label="Calories" value={formatCalories(totals.calories)} />
-        <NutrientStatCard accent={colors.secondary} label="Protein" value={`${Math.round(totals.protein)} g`} />
+        <NutrientStatCard label="Calorieen" value={formatCalories(totals.calories)} />
+        <NutrientStatCard accent={colors.secondary} label="Eiwit" value={`${Math.round(totals.protein)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#F59E0B" label="Carbs" value={`${Math.round(totals.carbs)} g`} />
-        <NutrientStatCard accent="#E85D75" label="Fat" value={`${Math.round(totals.fat)} g`} />
+        <NutrientStatCard accent="#F59E0B" label="Koolhydraten" value={`${Math.round(totals.carbs)} g`} />
+        <NutrientStatCard accent="#E85D75" label="Vet" value={`${Math.round(totals.fat)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#8B5CF6" label="Fiber" value={`${Math.round(totals.fiber)} g`} />
-        <NutrientStatCard accent="#F97316" label="Sugar" value={`${Math.round(totals.sugar)} g`} />
+        <NutrientStatCard accent="#8B5CF6" label="Vezels" value={`${Math.round(totals.fiber)} g`} />
+        <NutrientStatCard accent="#F97316" label="Suiker" value={`${Math.round(totals.sugar)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#2563EB" label="Sodium" value={`${Math.round(totals.sodium)} mg`} />
-        <NutrientStatCard accent="#0F766E" label="Meals today" value={String(todayMeals.length)} />
+        <NutrientStatCard accent="#2563EB" label="Natrium" value={`${Math.round(totals.sodium)} mg`} />
+        <NutrientStatCard accent="#0F766E" label="Maaltijden vandaag" value={String(todayMeals.length)} />
       </View>
 
       <InsightBanner
         text={
           profile?.goal === 'build_muscle'
-            ? 'Protein looks solid when lunch and dinner both carry enough volume. Keep breakfast from becoming the weak link.'
+            ? 'Je eiwitinname ziet er sterk uit als lunch en avondeten genoeg volume hebben. Zorg dat ontbijt geen zwakke schakel wordt.'
             : profile?.goal === 'lose_weight'
-              ? 'Fiber and protein are your best levers today if you want to stay full with fewer calories.'
-              : 'Consistency is strong when your first logged meal already includes protein and structure.'
+              ? 'Vezels en eiwitten zijn vandaag je beste hefbomen als je met minder calorieen verzadigd wilt blijven.'
+              : 'Je bouwt sterke regelmaat op wanneer je eerste gelogde maaltijd al eiwit en structuur bevat.'
         }
       />
 
-      <MacroProgressCard color={colors.primary} current={totals.calories} target={profile?.calorie_target ?? null} title="Calorie goal" unit=" kcal" />
-      <MacroProgressCard color={colors.secondary} current={totals.protein} target={profile?.protein_target ?? null} title="Protein goal" unit=" g" />
+      <MacroProgressCard color={colors.primary} current={totals.calories} target={profile?.calorie_target ?? null} title="Caloriedoel" unit=" kcal" />
+      <MacroProgressCard color={colors.secondary} current={totals.protein} target={profile?.protein_target ?? null} title="Eiwitdoel" unit=" g" />
 
       <SectionHeader
         action={
           todayMeals.length ? (
             <Pressable onPress={() => router.push(`/day/${getTodayIsoDate()}`)}>
-              <Text style={{ color: colors.secondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>View day</Text>
+              <Text style={{ color: colors.secondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>Bekijk dag</Text>
             </Pressable>
           ) : null
         }
-        subtitle="Meals logged today update instantly."
-        title="Today’s meals"
+        subtitle="Maaltijden die je vandaag logt worden direct bijgewerkt."
+        title="Maaltijden van vandaag"
       />
 
       {todayMeals.length ? (
@@ -147,17 +158,15 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <EmptyState
-          description="Log your first meal today and NutriVoice will calculate your calories, macros, and daily progress instantly."
+          description="Log vandaag je eerste maaltijd en NutriVoice berekent direct je calorieen, macro's en dagvoortgang."
           icon="restaurant-outline"
-          title="No meals yet today"
+          title="Nog geen maaltijden vandaag"
         />
       )}
 
       <WeeklySummaryCard averages={weeklyAverages} />
 
-      {profile?.is_premium ? (
-        <SectionHeader subtitle="Your AI coach is unlocked." title="Premium coaching" />
-      ) : null}
+      {profile?.is_premium ? <SectionHeader subtitle="Je AI-coach is ontgrendeld." title="Premium advies" /> : null}
       {profile?.is_premium ? (
         <Pressable onPress={() => router.push('/(tabs)/premium')}>
           <View
@@ -169,14 +178,14 @@ export default function DashboardScreen() {
               padding: 18,
               gap: 8,
             }}>
-            <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>See today’s AI recommendations</Text>
+            <Text style={{ color: colors.text, fontSize: 17, fontFamily: 'Manrope_700Bold' }}>Bekijk de AI-aanbevelingen van vandaag</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
-              Goal-aware advice, warning flags, and practical next-step suggestions.
+              Advies op basis van je doel, waarschuwingssignalen en praktische vervolgstappen.
             </Text>
           </View>
         </Pressable>
       ) : (
-        <PremiumUpsellCard onPress={() => router.push('/(tabs)/premium')} />
+        <PremiumUpsellCard onPress={() => router.push('/premium/coming-soon')} />
       )}
     </ScreenContainer>
   );

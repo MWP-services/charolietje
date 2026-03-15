@@ -27,6 +27,7 @@ export const AppHeader = ({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
           {showBackButton ? (
             <Pressable
+              accessibilityLabel="Ga terug"
               accessibilityRole="button"
               onPress={() => router.back()}
               style={{
@@ -45,12 +46,12 @@ export const AppHeader = ({
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontSize: 28, fontFamily: 'Manrope_800ExtraBold' }}>{title}</Text>
             {subtitle ? (
-              <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: 'Manrope_500Medium' }}>{subtitle}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: 'Manrope_500Medium' }}>{subtitle}</Text>
             ) : null}
           </View>
         </View>
         {actionLabel && onActionPress ? (
-          <Pressable accessibilityRole="button" onPress={onActionPress}>
+          <Pressable accessibilityLabel={actionLabel} accessibilityRole="button" onPress={onActionPress}>
             <Text style={{ color: colors.secondary, fontSize: 14, fontFamily: 'Manrope_700Bold' }}>{actionLabel}</Text>
           </Pressable>
         ) : null}

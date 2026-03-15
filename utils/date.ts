@@ -6,22 +6,23 @@ import {
   startOfWeek,
   subDays,
 } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 import type { MealWithItems } from '@/types/meal';
 
 export const getTodayIsoDate = () => format(new Date(), 'yyyy-MM-dd');
 
-export const formatDisplayDate = (date: string) => format(parseISO(date), 'EEEE d MMM');
+export const formatDisplayDate = (date: string) => format(parseISO(date), 'EEEE d MMM', { locale: nl });
 
-export const formatLongDate = (date: string) => format(parseISO(date), 'd MMMM yyyy');
+export const formatLongDate = (date: string) => format(parseISO(date), 'd MMMM yyyy', { locale: nl });
 
 export const formatRelativeDay = (date: string) => {
   const parsed = parseISO(date);
   if (isSameDay(parsed, new Date())) {
-    return 'Today';
+    return 'Vandaag';
   }
 
-  return formatDistanceToNowStrict(parsed, { addSuffix: true });
+  return formatDistanceToNowStrict(parsed, { addSuffix: true, locale: nl });
 };
 
 export const getLastNDates = (count: number) =>
