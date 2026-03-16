@@ -124,7 +124,7 @@ export default function RootLayout() {
         <Stack.Screen name="meal/[id]" />
         <Stack.Screen name="meal/edit/[id]" />
         <Stack.Screen name="day/[date]" />
-        <Stack.Screen name="premium/coming-soon" />
+        <Stack.Screen name="premium/activate" />
         <Stack.Screen name="auth" />
       </Stack>
     </ThemeProvider>

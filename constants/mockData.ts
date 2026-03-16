@@ -53,12 +53,12 @@ export const buildSeedProfile = (userId: string, email?: string | null): UserPro
 
   return {
     id: userId,
-    full_name: 'Micha',
-    email: email ?? 'micha@nutrivoice.app',
+    full_name: email?.split('@')[0] ?? 'NutriVoice gebruiker',
+    email: email ?? undefined,
     goal: 'build_muscle',
     calorie_target: 2600,
     protein_target: 180,
-    is_premium: true,
+    is_premium: false,
     age: 31,
     weight_kg: 78,
     height_cm: 182,

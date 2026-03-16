@@ -4,6 +4,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { FormField } from '@/components/common/FormField';
 import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
@@ -32,10 +33,10 @@ export default function RegisterScreen() {
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: 'Micha Example',
-      email: 'micha@nutrivoice.app',
-      password: 'Password123',
-      confirmPassword: 'Password123',
+      fullName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -61,6 +62,7 @@ export default function RegisterScreen() {
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
       <AppHeader showBackButton subtitle="Maak je account aan en begin met tracken via je stem." title="Account aanmaken" />
+      <AuthModeNotice compact />
       <InlineMessage
         description="Na registratie bevestig je eerst je e-mailadres. Daarna sturen we je automatisch door naar onboarding."
         title="Veilige accountactivatie"

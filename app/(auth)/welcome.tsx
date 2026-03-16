@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
+import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
@@ -24,6 +25,7 @@ export default function WelcomeScreen() {
             Vertel wat je hebt gegeten, controleer de transcriptie en krijg slimme voedingsinzichten met ingebouwde premium coaching.
           </Text>
         </View>
+        <AuthModeNotice />
 
         <LinearGradient
           colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}

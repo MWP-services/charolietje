@@ -72,6 +72,7 @@ export const goalsSchema = z.object({
 
 export const settingsSchema = z.object({
   fullName: z.string().min(2, 'Vul je naam in'),
+  goal: z.enum(['lose_weight', 'maintain', 'build_muscle']),
   calorieTarget: z
     .string()
     .optional()

@@ -185,7 +185,7 @@ export default function DashboardScreen() {
           </View>
         </Pressable>
       ) : (
-        <PremiumUpsellCard onPress={() => router.push('/premium/coming-soon')} />
+        <PremiumUpsellCard onPress={() => router.push('/premium/activate')} />
       )}
     </ScreenContainer>
   );

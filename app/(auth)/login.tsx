@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { FormField } from '@/components/common/FormField';
 import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
@@ -35,8 +36,8 @@ export default function LoginScreen() {
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'micha@nutrivoice.app',
-      password: 'Password123',
+      email: '',
+      password: '',
     },
   });
 
@@ -75,6 +76,7 @@ export default function LoginScreen() {
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
       <AppHeader showBackButton subtitle="Welkom terug bij slimmer voeding tracken." title="Inloggen" />
+      <AuthModeNotice compact />
       {params.verified === '1' ? (
         <InlineMessage
           description="Je e-mailadres is bevestigd. Log nu in om door te gaan met onboarding of direct naar je dashboard te gaan."

@@ -11,6 +11,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { Tag } from '@/components/common/Tag';
 import { PremiumUpsellCard } from '@/components/premium/PremiumUpsellCard';
 import { colors } from '@/constants/colors';
+import { premiumLaunchPlan } from '@/constants/premiumPlan';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useDailyTotals } from '@/hooks/useDailyTotals';
 import { useMeals } from '@/hooks/useMeals';
@@ -73,40 +74,68 @@ export default function PremiumAdviceScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Tag label="Premium vergrendeld" tone="warning" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              Upgrade om coaching te ontgrendelen
+              Activeer het launch-plan om coaching te ontgrendelen
             </Text>
           </View>
-          <PremiumUpsellCard onPress={() => router.push('/premium/coming-soon')} />
+          <PremiumUpsellCard onPress={() => router.push('/premium/activate')} />
           <Card style={{ gap: 14 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Wat premium vrijspeelt</Text>
-            {[
-              'Dagelijkse AI-aanbevelingen voor afvallen, behoud of spieropbouw',
-              'Patroongestuurde waarschuwingen zoals weinig eiwit, weinig vezels of veel snacks',
-              'Sterke punten zodat je weet welke gewoontes al goed werken',
-              'Een coachingarchitectuur die klaar is voor abonnementen en rijkere analyse',
-            ].map((item) => (
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Wat dit plan vrijspeelt</Text>
+            {premiumLaunchPlan.features.map((item) => (
               <View key={item} style={{ flexDirection: 'row', gap: 10 }}>
                 <Ionicons color={colors.secondary} name="sparkles-outline" size={18} />
-                <Text style={{ color: colors.textSecondary, flex: 1, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>{item}</Text>
+                <Text style={{ color: colors.textSecondary, flex: 1, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
+                  {item}
+                </Text>
               </View>
             ))}
           </Card>
-          <PrimaryButton label="Schakel premium testmodus in" onPress={() => router.push('/(tabs)/settings')} />
+          <PrimaryButton label={premiumLaunchPlan.ctaLabel} onPress={() => router.push('/premium/activate')} />
         </View>
       ) : (
         <View style={{ gap: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Tag label="Premium actief" tone="primary" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              Coaching gebruikt je huidige doel en recente maaltijden
+              {premiumLaunchPlan.priceLabel} launch-plan actief
             </Text>
           </View>
+
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Card style={{ flex: 1, gap: 8 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>COACH SCORE</Text>
+              <Text style={{ color: colors.text, fontSize: 30, fontFamily: 'Manrope_800ExtraBold' }}>{advice?.coach_score ?? '--'}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, fontFamily: 'Manrope_600SemiBold' }}>
+                {advice?.score_label ?? 'We beoordelen je dag'}
+              </Text>
+            </Card>
+            <Card style={{ flex: 1, gap: 8 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>VOLGENDE FOCUS</Text>
+              <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22, fontFamily: 'Manrope_700Bold' }}>
+                {advice?.next_meal_focus ?? 'We bepalen je volgende slimme stap.'}
+              </Text>
+            </Card>
+          </View>
+
           <Card style={{ gap: 8 }}>
             <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Analyse van vandaag</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
               {advice?.summary ?? 'Je premium aanbevelingen worden gegenereerd...'}
             </Text>
           </Card>
+
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Patroon dat opvalt</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
+              {advice?.pattern_summary ?? 'We zoeken naar patronen in je dag.'}
+            </Text>
+          </Card>
+
+          <SectionHeader title="Checklist voor vandaag" />
+          {advice?.checklist.map((tip) => (
+            <Card key={tip} style={{ padding: 16 }}>
+              <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>
+            </Card>
+          ))}
 
           <SectionHeader title="Aanbevelingen" />
           {advice?.goal_specific_tips.map((tip) => (
@@ -129,7 +158,7 @@ export default function PremiumAdviceScreen() {
             </Card>
           ))}
 
-          <SectionHeader title="Verbeterideeën" />
+          <SectionHeader title="Verbeterideeen" />
           {advice?.improvements.map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>

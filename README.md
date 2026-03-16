@@ -33,12 +33,12 @@ The app runs in two modes:
 - Hybrid nutrition enrichment with Open Food Facts, USDA fallback, and local safety fallback
 - Daily totals for calories, protein, carbs, fat, fiber, sugar, and sodium
 - Meal detail, day detail, edit meal, delete meal
-- Premium coaching screen with goal-aware recommendations
+- Premium coaching screen with goal-aware recommendations and a launch plan that can be activated in-app
 - Better inline errors and retry flows in key meal logging screens
 - Improved edit-meal flow with meal type selection, re-parse from text, and item duplication
 - Weekly overview scaffold and dashboard insight banner
 - Offline status banner scaffold for future sync-aware behavior
-- Premium mock toggle in settings for fast testing
+- Premium launch plan visible in-app with temporary EUR 0 activation
 
 ## Tech stack
 
@@ -139,6 +139,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 If these are missing, the app falls back to mock mode so you can still explore the full MVP.
+
+For EAS/TestFlight builds, set these as EAS environment variables for the matching build profile as well. A local `.env` file on your machine does not retroactively affect an already-uploaded TestFlight binary.
 
 ## How to connect Supabase
 
@@ -305,7 +307,7 @@ Relevant TODO comments are already placed in those files.
 - Add server-side profile creation trigger after signup
 - Move AI analysis to edge functions or an API layer
 - Add retry queues and offline sync strategy
-- Add subscription billing for premium
+- Add real subscription billing for premium after the temporary EUR 0 launch plan ends
 - Add Apple Health and Google Fit integrations
 - Add barcode scanning and meal photo recognition
 - Add analytics, crash reporting, and feature flags
@@ -335,7 +337,7 @@ These items still need real product/business inputs before a real App Store or P
 - Replace app icon, adaptive icon, splash image, screenshots, and promotional artwork with final branded assets
 - Prepare a privacy policy URL and support URL
 - Prepare store listing copy in Dutch and/or English
-- Decide whether premium is hidden, marked as coming soon, or fully removed for the first review build
+- Confirm the reviewer note that premium currently activates in-app at EUR 0 without a purchase flow
 - Create reviewer notes describing:
   - guest mode
   - microphone usage for meal recording

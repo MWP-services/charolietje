@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Text } from 'react-native';
 import { z } from 'zod';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { Card } from '@/components/common/Card';
 import { FormField } from '@/components/common/FormField';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
@@ -27,20 +29,36 @@ export default function ProfileSettingsScreen() {
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       fullName: profile?.full_name ?? '',
+      goal: profile?.goal ?? 'maintain',
       calorieTarget: profile?.calorie_target ? String(profile.calorie_target) : '',
       proteinTarget: profile?.protein_target ? String(profile.protein_target) : '',
     },
   });
 
+  useEffect(() => {
+    if (!profile) {
+      return;
+    }
+
+    reset({
+      fullName: profile.full_name ?? '',
+      goal: profile.goal ?? 'maintain',
+      calorieTarget: profile.calorie_target ? String(profile.calorie_target) : '',
+      proteinTarget: profile.protein_target ? String(profile.protein_target) : '',
+    });
+  }, [profile, reset]);
+
   const onSubmit = handleSubmit(async (values) => {
     try {
       await updateProfile({
         full_name: values.fullName,
+        goal: values.goal as GoalType,
         calorie_target: values.calorieTarget ? Number(values.calorieTarget) : null,
         protein_target: values.proteinTarget ? Number(values.proteinTarget) : null,
       });
@@ -53,6 +71,7 @@ export default function ProfileSettingsScreen() {
   return (
     <ScreenContainer loading={isLoading && !profile} loadingLabel="Je instellingen worden geladen..." onRefresh={refresh} refreshing={isRefreshing}>
       <AppHeader subtitle="Profiel, doelen, premiummodus en accountacties." title="Instellingen" />
+      <AuthModeNotice compact />
       <Card style={{ gap: 16 }}>
         <Controller
           control={control}
@@ -62,11 +81,10 @@ export default function ProfileSettingsScreen() {
           )}
         />
         <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 14 }}>Doel</Text>
-        <GoalSelector
-          onChange={(goal) => {
-            updateProfile({ goal: goal as GoalType });
-          }}
-          value={profile?.goal ?? 'maintain'}
+        <Controller
+          control={control}
+          name="goal"
+          render={({ field: { onChange, value } }) => <GoalSelector onChange={onChange as (goal: GoalType) => void} value={value as GoalType} />}
         />
         <Controller
           control={control}
@@ -87,10 +105,9 @@ export default function ProfileSettingsScreen() {
 
       <Card>
         <SettingsRow
-          description="Schakel premiumfuncties in testmodus in."
-          onSwitchChange={(value) => updateProfile({ is_premium: value })}
-          switchValue={profile?.is_premium ?? false}
-          title="Premium testschakelaar"
+          description="Premium Launch staat tijdelijk gratis open. Activeren of beheren doe je via het premium scherm."
+          rightText={profile?.is_premium ? 'Actief' : 'Niet actief'}
+          title="Premium plan"
         />
         <SettingsRow rightText={profile?.email ?? 'Geen e-mail'} title="Account" />
       </Card>

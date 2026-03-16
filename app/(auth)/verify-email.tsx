@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 import { AppHeader } from '@/components/common/AppHeader';
+import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
@@ -44,6 +45,7 @@ export default function VerifyEmailScreen() {
         subtitle="Bevestig eerst je e-mailadres om je account veilig te activeren en daarna verder te gaan met onboarding."
         title="Controleer je e-mail"
       />
+      <AuthModeNotice />
 
       <InlineMessage
         description={email ? `We hebben een verificatielink gestuurd naar ${email}. Open die link op je iPhone om je account direct te activeren.` : 'We hebben een verificatielink gestuurd naar je inbox.'}

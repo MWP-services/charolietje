@@ -208,6 +208,7 @@ export const authService = {
       ...buildSeedProfile(session.userId, null),
       full_name: 'Gast',
       email: undefined,
+      is_premium: false,
       has_completed_onboarding: true,
     });
 
@@ -284,6 +285,7 @@ export const authService = {
     }
 
     if (accessToken && refreshToken) {
+      await persistMockSession(null);
       const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -302,6 +304,7 @@ export const authService = {
     const normalizedType = normalizeVerificationType(type);
 
     if (tokenHash && normalizedType) {
+      await persistMockSession(null);
       const verifyType = normalizedType === 'signup' || normalizedType === 'magiclink' ? 'email' : normalizedType;
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
@@ -329,7 +332,7 @@ export const authService = {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       void (async () => {
         const localSession = await getPersistedLocalSession();
-        if (localSession && localSession.provider !== 'supabase') {
+        if (!session && localSession && localSession.provider !== 'supabase') {
           callback(localSession);
           return;
         }

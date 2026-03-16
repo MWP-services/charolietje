@@ -53,6 +53,7 @@ const authStorage =
       : AsyncStorage;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const authBackendMode = isSupabaseConfigured ? 'supabase' : 'mock';
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!, {
