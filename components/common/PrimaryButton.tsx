@@ -10,9 +10,10 @@ type PrimaryButtonProps = {
   loading?: boolean;
   icon?: React.ReactNode;
   accessibilityLabel?: string;
+  tone?: 'primary' | 'danger';
 };
 
-export const PrimaryButton = ({ label, onPress, disabled, loading, icon, accessibilityLabel }: PrimaryButtonProps) => (
+export const PrimaryButton = ({ label, onPress, disabled, loading, icon, accessibilityLabel, tone = 'primary' }: PrimaryButtonProps) => (
   <Pressable
     accessibilityLabel={accessibilityLabel ?? label}
     accessibilityRole="button"
@@ -24,7 +25,7 @@ export const PrimaryButton = ({ label, onPress, disabled, loading, icon, accessi
       transform: [{ scale: pressed ? 0.985 : 1 }],
       minHeight: 54,
       borderRadius: radii.pill,
-      backgroundColor: colors.primary,
+      backgroundColor: tone === 'danger' ? colors.danger : colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',

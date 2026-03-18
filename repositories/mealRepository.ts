@@ -101,4 +101,8 @@ export const mealRepository = {
     const nextMeals = meals.filter((meal) => meal.id !== mealId);
     await AsyncStorage.setItem(mealsKey(userId), JSON.stringify(nextMeals));
   },
+
+  async clearLocalMeals(userId: string) {
+    await AsyncStorage.removeItem(mealsKey(userId));
+  },
 };

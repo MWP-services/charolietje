@@ -19,13 +19,14 @@ type AuthState = {
   handleAuthRedirect: (url: string) => Promise<AuthRedirectResult>;
   setPendingVerificationEmail: (email: string | null) => void;
   setPasswordRecoveryFlow: (active: boolean) => void;
+  deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
 
 let unsubscribeAuth: (() => void) | null = null;
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   isInitializing: true,
   error: null,
@@ -135,6 +136,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setPasswordRecoveryFlow(active) {
     set({ isPasswordRecoveryFlow: active });
+  },
+  async deleteAccount() {
+    const session = get().session;
+    if (!session) {
+      throw new Error('Er is geen actieve sessie om te verwijderen.');
+    }
+
+    try {
+      await authService.deleteAccount(session);
+      set({
+        session: null,
+        error: null,
+        pendingVerificationEmail: null,
+        isPasswordRecoveryFlow: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Account verwijderen mislukt';
+      set({ error: message });
+      throw error;
+    }
   },
   async signOut() {
     await authService.signOut();

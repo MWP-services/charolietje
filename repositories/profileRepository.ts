@@ -71,4 +71,8 @@ export const profileRepository = {
     await AsyncStorage.setItem(profileKey(profile.id), JSON.stringify(profile));
     return profile;
   },
+
+  async clearLocalProfile(userId: string) {
+    await AsyncStorage.removeItem(profileKey(userId));
+  },
 };

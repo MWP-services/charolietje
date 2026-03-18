@@ -3,11 +3,14 @@ import * as Linking from 'expo-linking';
 
 import { buildSeedProfile } from '@/constants/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { mealRepository } from '@/repositories/mealRepository';
 import { profileRepository } from '@/repositories/profileRepository';
 import type { AppSession, AuthRedirectResult, AuthSignUpResult } from '@/types/auth';
 
 const mockSessionKey = 'nutrivoice:mock-session';
 const guestSessionId = 'guest_local';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 type SignUpInput = {
   fullName: string;
@@ -43,6 +46,11 @@ const toAppSession = (session: { user: { id: string; email?: string | null } }):
 });
 
 const buildAuthRedirectUrl = () => Linking.createURL('/auth/callback');
+const isLocalOnlySession = (session: AppSession) => session.provider === 'guest' || session.provider === 'mock';
+
+const clearLocalAccountData = async (userId: string) => {
+  await Promise.all([profileRepository.clearLocalProfile(userId), mealRepository.clearLocalMeals(userId), persistMockSession(null)]);
+};
 
 const normalizeVerificationType = (type: string | null): VerificationType | null => {
   switch (type) {
@@ -223,6 +231,67 @@ export const authService = {
       if (error) {
         throw error;
       }
+    }
+  },
+
+  async deleteAccount(session: AppSession) {
+    if (isLocalOnlySession(session)) {
+      await clearLocalAccountData(session.userId);
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase || !supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Account verwijderen is alleen beschikbaar wanneer Supabase correct is ingesteld.');
+    }
+
+    const {
+      data: { session: currentSession },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    const accessToken = currentSession?.access_token;
+    if (!accessToken) {
+      throw new Error('Je sessie is verlopen. Log opnieuw in om je account te verwijderen.');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      let detail = responseText;
+
+      try {
+        const parsed = JSON.parse(responseText) as { error?: string; detail?: string };
+        detail = parsed.error || parsed.detail || responseText;
+      } catch {
+        // Ignore invalid JSON and keep the raw response text.
+      }
+
+      if (response.status === 401) {
+        throw new Error(`Account verwijderen geweigerd (${response.status}). ${detail || 'Log opnieuw in en probeer het nog eens.'}`);
+      }
+
+      throw new Error(`Account verwijderen mislukt (${response.status}). ${detail || 'Probeer het opnieuw.'}`);
+    }
+
+    await persistMockSession(null);
+
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      throw signOutError;
     }
   },
 
