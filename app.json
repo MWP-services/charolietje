@@ -5,7 +5,7 @@
     "version": "1.0.2",
     "description": "NutriVoice is een voice-first voedingsapp waarmee gebruikers maaltijden kunnen loggen, voedingswaarden volgen en AI-gedreven coaching ontvangen.",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon-welcome.png",
     "scheme": "nutrivoice",
     "userInterfaceStyle": "light",
     "primaryColor": "#18B67A",
@@ -35,10 +35,8 @@
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/app-icon-welcome-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
