@@ -24,6 +24,8 @@ const mapSupabaseMeal = (meal: any): MealWithItems => ({
   items: (meal.meal_items ?? []) as MealItem[],
 });
 
+const toPersistedMealItem = ({ nutritionSource, ...item }: MealItem) => item;
+
 const fetchSupabaseMeal = async (mealId: string) => {
   if (!supabase) {
     return null;
@@ -74,7 +76,7 @@ export const mealRepository = {
         throw new Error(deleteItemsError.message);
       }
 
-      const { error: itemsError } = await supabase.from('meal_items').insert(items);
+      const { error: itemsError } = await supabase.from('meal_items').insert(items.map(toPersistedMealItem));
       if (itemsError) {
         throw new Error(itemsError.message);
       }

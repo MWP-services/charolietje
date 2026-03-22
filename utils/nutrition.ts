@@ -1,7 +1,18 @@
-import type { AnalyzedMealItem, DailyTotals, MealWithItems } from '@/types/meal';
-import type { Nutrients } from '@/types/nutrition';
+import type { AnalyzedMealItem, DailyTotals, MealItem, MealWithItems } from '@/types/meal';
+import type { NutrientKey, Nutrients, OptionalNutrients } from '@/types/nutrition';
 
 const round = (value: number) => Math.round(value * 10) / 10;
+export const nutrientKeys: NutrientKey[] = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'];
+const nutrientLabels: Record<NutrientKey, string> = {
+  calories: 'calorieen',
+  protein: 'eiwit',
+  carbs: 'koolhydraten',
+  fat: 'vet',
+  fiber: 'vezels',
+  sugar: 'suiker',
+  sodium: 'natrium',
+};
+const asNumber = (value: number | null | undefined) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
 export const emptyNutrients = (): Nutrients => ({
   calories: 0,
@@ -13,16 +24,32 @@ export const emptyNutrients = (): Nutrients => ({
   sodium: 0,
 });
 
-export const calculateMealTotals = (items: AnalyzedMealItem[]): Nutrients =>
+export const emptyOptionalNutrients = (): OptionalNutrients => ({
+  calories: null,
+  protein: null,
+  carbs: null,
+  fat: null,
+  fiber: null,
+  sugar: null,
+  sodium: null,
+});
+
+export const hasCompleteNutrition = (item: OptionalNutrients) =>
+  nutrientKeys.every((key) => typeof item[key] === 'number' && Number.isFinite(item[key]));
+
+export const getMissingNutritionLabels = (item: OptionalNutrients) =>
+  nutrientKeys.filter((key) => item[key] === null).map((key) => nutrientLabels[key]);
+
+export const calculateMealTotals = (items: Array<AnalyzedMealItem | MealItem>): Nutrients =>
   items.reduce<Nutrients>(
     (totals, item) => ({
-      calories: round(totals.calories + item.calories),
-      protein: round(totals.protein + item.protein),
-      carbs: round(totals.carbs + item.carbs),
-      fat: round(totals.fat + item.fat),
-      fiber: round(totals.fiber + item.fiber),
-      sugar: round(totals.sugar + item.sugar),
-      sodium: round(totals.sodium + item.sodium),
+      calories: round(totals.calories + asNumber(item.calories)),
+      protein: round(totals.protein + asNumber(item.protein)),
+      carbs: round(totals.carbs + asNumber(item.carbs)),
+      fat: round(totals.fat + asNumber(item.fat)),
+      fiber: round(totals.fiber + asNumber(item.fiber)),
+      sugar: round(totals.sugar + asNumber(item.sugar)),
+      sodium: round(totals.sodium + asNumber(item.sodium)),
     }),
     emptyNutrients(),
   );

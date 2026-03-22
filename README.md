@@ -315,7 +315,7 @@ Relevant TODO comments are already placed in those files.
 
 ## Suggested next steps
 
-1. Replace placeholder store assets with final branded icon, splash, and screenshots.
+1. Finalize store assets such as the branded icon, splash, and screenshots.
 2. Add caching and rate limiting around the new hybrid nutrition provider.
 3. Move premium advice generation to a backend service.
 4. Add real subscription entitlements.
@@ -333,7 +333,7 @@ Relevant TODO comments are already placed in those files.
 
 These items still need real product/business inputs before a real App Store or Play Store submission:
 
-- Replace placeholder bundle/package IDs if you want your own final production identifiers
+- Replace the current bundle/package IDs if you want your own final production identifiers
 - Replace app icon, adaptive icon, splash image, screenshots, and promotional artwork with final branded assets
 - Prepare a privacy policy URL and support URL
 - Prepare store listing copy in Dutch and/or English

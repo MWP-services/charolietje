@@ -1,4 +1,4 @@
-import type { Nutrients } from '@/types/nutrition';
+import type { Nutrients, OptionalNutrients } from '@/types/nutrition';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'unknown';
 
@@ -26,15 +26,9 @@ export type MealItem = {
   name: string;
   quantity: number;
   unit: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber: number;
-  sugar: number;
-  sodium: number;
   confidence?: number | null;
-};
+  nutritionSource?: 'matched' | 'manual' | 'unresolved';
+} & OptionalNutrients;
 
 export type MealWithItems = Meal & {
   items: MealItem[];
@@ -57,7 +51,10 @@ export type ParsedMeal = {
   originalText: string;
 };
 
-export type AnalyzedMealItem = ParsedMealItem & Nutrients;
+export type AnalyzedMealItem = ParsedMealItem &
+  OptionalNutrients & {
+    nutritionSource?: 'matched' | 'manual' | 'unresolved';
+  };
 
 export type AnalyzedMeal = {
   mealType: MealType;

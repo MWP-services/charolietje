@@ -3,6 +3,7 @@ import type { AnalyzedMeal, MealWithItems } from '@/types/meal';
 import { createId, createUuid } from '@/utils/id';
 import { toMealTotalsRecord } from '@/utils/nutrition';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { nutritionReferenceService } from '@/services/nutrition/nutritionReferenceService';
 
 export const mealService = {
   listMeals: mealRepository.listMeals,
@@ -30,12 +31,16 @@ export const mealService = {
       ...toMealTotalsRecord(analysis.totals),
     };
 
-    return mealRepository.saveMeal(meal);
+    const savedMeal = await mealRepository.saveMeal(meal);
+    await nutritionReferenceService.learnReferencesFromItems(userId, items);
+    return savedMeal;
   },
   async updateMeal(meal: MealWithItems) {
-    return mealRepository.saveMeal({
+    const savedMeal = await mealRepository.saveMeal({
       ...meal,
       updated_at: new Date().toISOString(),
     });
+    await nutritionReferenceService.learnReferencesFromItems(meal.user_id, meal.items);
+    return savedMeal;
   },
 };

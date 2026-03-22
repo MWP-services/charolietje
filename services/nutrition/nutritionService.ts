@@ -2,6 +2,8 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { mockNutritionDatabase } from '@/constants/mockNutritionDatabase';
 import type { AnalyzedMealItem, ParsedMealItem } from '@/types/meal';
 import type { NutritionReference } from '@/types/nutrition';
+import { emptyOptionalNutrients } from '@/utils/nutrition';
+import { nutritionReferenceService } from '@/services/nutrition/nutritionReferenceService';
 
 const withDelay = async <T>(value: T, delay = 650) =>
   new Promise<T>((resolve) => {
@@ -11,6 +13,13 @@ const withDelay = async <T>(value: T, delay = 650) =>
 const round = (value: number) => Math.round(value * 10) / 10;
 
 const countUnits = new Set(['piece', 'slice', 'serving']);
+const volumeUnitToMilliliters: Record<string, number> = {
+  cup: 240,
+  glass: 250,
+  mug: 300,
+  tbsp: 15,
+  tsp: 5,
+};
 
 const normalizeUnit = (unit: string) => {
   const normalized = unit.trim().toLowerCase();
@@ -27,6 +36,35 @@ const normalizeUnit = (unit: string) => {
     case 'millilitre':
     case 'millilitres':
       return 'ml';
+    case 'cup':
+    case 'cups':
+    case 'kop':
+    case 'koppen':
+    case 'kopje':
+    case 'kopjes':
+      return 'cup';
+    case 'glass':
+    case 'glasses':
+    case 'glas':
+    case 'glazen':
+      return 'glass';
+    case 'mug':
+    case 'mugs':
+    case 'mok':
+    case 'mokken':
+      return 'mug';
+    case 'tablespoon':
+    case 'tablespoons':
+    case 'tbsp':
+    case 'eetlepel':
+    case 'eetlepels':
+      return 'tbsp';
+    case 'teaspoon':
+    case 'teaspoons':
+    case 'tsp':
+    case 'theelepel':
+    case 'theelepels':
+      return 'tsp';
     case 'piece':
     case 'pieces':
     case 'stuk':
@@ -47,12 +85,7 @@ const normalizeUnit = (unit: string) => {
   }
 };
 
-const normalizeName = (name: string) =>
-  name
-    .trim()
-    .toLowerCase()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ');
+const normalizeName = nutritionReferenceService.normalizeName;
 
 const nameAliases: Record<string, string> = {
   brood: 'bread',
@@ -60,6 +93,14 @@ const nameAliases: Record<string, string> = {
   boterhammen: 'bread',
   peanutbutter: 'peanut butter',
   pindakaas: 'peanut butter',
+  coffee: 'black coffee',
+  koffie: 'black coffee',
+  'zwarte koffie': 'black coffee',
+  'black coffee': 'black coffee',
+  tea: 'tea',
+  thee: 'tea',
+  water: 'water',
+  watertje: 'water',
   milk: 'semi-skimmed milk',
   melk: 'semi-skimmed milk',
   'halfvolle melk': 'semi-skimmed milk',
@@ -87,54 +128,27 @@ const nameAliases: Record<string, string> = {
   'syrup waffle': 'stroopwafel',
 };
 
-const genericReferenceForUnit = (unit: string): NutritionReference => {
-  if (unit === 'ml') {
-    return {
-      name: 'Generic drink',
-      baseQuantity: 100,
-      baseUnit: 'ml',
-      calories: 45,
-      protein: 1,
-      carbs: 8,
-      fat: 1,
-      fiber: 0,
-      sugar: 6,
-      sodium: 40,
-    };
+const toMilliliters = (quantity: number, unit: string) => {
+  const normalizedUnit = normalizeUnit(unit);
+  if (normalizedUnit === 'ml') {
+    return quantity;
   }
 
-  if (unit === 'gram') {
-    return {
-      name: 'Generic food',
-      baseQuantity: 100,
-      baseUnit: 'gram',
-      calories: 180,
-      protein: 8,
-      carbs: 16,
-      fat: 8,
-      fiber: 2,
-      sugar: 2,
-      sodium: 180,
-    };
+  if (volumeUnitToMilliliters[normalizedUnit]) {
+    return quantity * volumeUnitToMilliliters[normalizedUnit];
   }
 
-  return {
-    name: 'Generic serving',
-    baseQuantity: 1,
-    baseUnit: 'serving',
-    calories: 140,
-    protein: 5,
-    carbs: 14,
-    fat: 6,
-    fiber: 1.5,
-    sugar: 4,
-    sodium: 180,
-  };
+  return null;
 };
 
-const resolveReference = (name: string, unit: string) => {
+const resolveReference = (name: string, unit: string, learnedReferences?: Map<string, NutritionReference>) => {
   const normalizedName = normalizeName(name);
   const normalizedUnit = normalizeUnit(unit);
+
+  const learnedReference = learnedReferences?.get(normalizedName);
+  if (learnedReference) {
+    return { reference: learnedReference, normalizedUnit };
+  }
 
   const directReference = mockNutritionDatabase[normalizedName];
   if (directReference) {
@@ -146,25 +160,22 @@ const resolveReference = (name: string, unit: string) => {
     return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
   }
 
-  const partialAliasKey = Object.entries(nameAliases).find(([alias]) => normalizedName.includes(alias))?.[1];
-  if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
-    return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
-  }
-
-  const partialReferenceKey = Object.keys(mockNutritionDatabase).find((key) => normalizedName.includes(key) || key.includes(normalizedName));
-  if (partialReferenceKey) {
-    return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
-  }
-
-  return { reference: genericReferenceForUnit(normalizedUnit), normalizedUnit };
+  return { reference: null, normalizedUnit };
 };
 
-const getMultiplier = (quantity: number, unit: string, reference: NutritionReference) => {
+const getMultiplier = (item: ParsedMealItem, unit: string, reference: NutritionReference) => {
+  const quantity = item.quantity;
   const normalizedUnit = normalizeUnit(unit);
   const normalizedReferenceUnit = normalizeUnit(reference.baseUnit);
 
   if (normalizedUnit === normalizedReferenceUnit) {
     return quantity / reference.baseQuantity;
+  }
+
+  const currentVolume = toMilliliters(quantity, normalizedUnit);
+  const referenceVolume = toMilliliters(reference.baseQuantity, normalizedReferenceUnit);
+  if (currentVolume !== null && referenceVolume !== null && referenceVolume > 0) {
+    return currentVolume / referenceVolume;
   }
 
   if (countUnits.has(normalizedUnit) && countUnits.has(normalizedReferenceUnit)) {
@@ -179,12 +190,26 @@ type RemoteNutritionLookupItem = AnalyzedMealItem & {
   source?: string | null;
 };
 
+const createUnresolvedItem = (item: ParsedMealItem, normalizedUnit: string): AnalyzedMealItem => ({
+  ...item,
+  unit: normalizedUnit,
+  ...emptyOptionalNutrients(),
+  nutritionSource: 'unresolved',
+});
+
 const getFunctionUrl = (path: string) => `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/${path}`;
 
-export const getNutritionForItemsMock = async (items: ParsedMealItem[]): Promise<AnalyzedMealItem[]> => {
-  const enriched = items.map((item) => {
-    const { reference, normalizedUnit } = resolveReference(item.name, item.unit);
-    const multiplier = getMultiplier(item.quantity, normalizedUnit, reference);
+export const getNutritionForItemsMock = async (
+  items: ParsedMealItem[],
+  learnedReferences?: Map<string, NutritionReference>,
+): Promise<AnalyzedMealItem[]> => {
+  const enriched: AnalyzedMealItem[] = items.map((item) => {
+    const { reference, normalizedUnit } = resolveReference(item.name, item.unit, learnedReferences);
+    if (!reference) {
+      return createUnresolvedItem(item, normalizedUnit);
+    }
+
+    const multiplier = getMultiplier(item, normalizedUnit, reference);
 
     return {
       ...item,
@@ -196,13 +221,17 @@ export const getNutritionForItemsMock = async (items: ParsedMealItem[]): Promise
       fiber: round(reference.fiber * multiplier),
       sugar: round(reference.sugar * multiplier),
       sodium: round(reference.sodium * multiplier),
+      nutritionSource: 'matched' as const,
     };
   });
 
   return withDelay(enriched, 520);
 };
 
-const getNutritionFromRemoteProviders = async (items: ParsedMealItem[]): Promise<AnalyzedMealItem[]> => {
+const getNutritionFromRemoteProviders = async (
+  items: ParsedMealItem[],
+  learnedReferences?: Map<string, NutritionReference>,
+): Promise<AnalyzedMealItem[]> => {
   const response = await fetch(getFunctionUrl('lookup-nutrition'), {
     method: 'POST',
     headers: {
@@ -233,36 +262,39 @@ const getNutritionFromRemoteProviders = async (items: ParsedMealItem[]): Promise
     throw new Error('De nutrition service gaf geen items terug.');
   }
 
-  const mockFallback = await getNutritionForItemsMock(items);
+  const mockFallback = await getNutritionForItemsMock(items, learnedReferences);
 
   return data.items.map((item, index) =>
     item.matched
       ? {
           ...items[index],
           ...item,
-          calories: round(item.calories),
-          protein: round(item.protein),
-          carbs: round(item.carbs),
-          fat: round(item.fat),
-          fiber: round(item.fiber),
-          sugar: round(item.sugar),
-          sodium: round(item.sodium),
+          calories: round(item.calories ?? 0),
+          protein: round(item.protein ?? 0),
+          carbs: round(item.carbs ?? 0),
+          fat: round(item.fat ?? 0),
+          fiber: round(item.fiber ?? 0),
+          sugar: round(item.sugar ?? 0),
+          sodium: round(item.sodium ?? 0),
+          nutritionSource: 'matched' as const,
         }
       : mockFallback[index],
   );
 };
 
 export const nutritionService = {
-  async getNutritionForItems(items: ParsedMealItem[]) {
+  async getNutritionForItems(items: ParsedMealItem[], userId?: string | null) {
+    const learnedReferences = await nutritionReferenceService.getReferenceMap(userId);
+
     if (!isSupabaseConfigured) {
-      return getNutritionForItemsMock(items);
+      return getNutritionForItemsMock(items, learnedReferences);
     }
 
     try {
-      return await getNutritionFromRemoteProviders(items);
+      return await getNutritionFromRemoteProviders(items, learnedReferences);
     } catch (error) {
       console.warn('Falling back to local nutrition matcher:', error);
-      return getNutritionForItemsMock(items);
+      return getNutritionForItemsMock(items, learnedReferences);
     }
   },
 };

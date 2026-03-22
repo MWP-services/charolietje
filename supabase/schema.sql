@@ -51,9 +51,31 @@ create table if not exists public.meal_items (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.nutrition_references (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  normalized_name text not null,
+  base_quantity numeric not null default 1,
+  base_unit text not null default 'serving',
+  calories numeric not null default 0,
+  protein numeric not null default 0,
+  carbs numeric not null default 0,
+  fat numeric not null default 0,
+  fiber numeric not null default 0,
+  sugar numeric not null default 0,
+  sodium numeric not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create unique index if not exists nutrition_references_user_normalized_name_idx
+  on public.nutrition_references(user_id, normalized_name);
+
 alter table public.profiles enable row level security;
 alter table public.meals enable row level security;
 alter table public.meal_items enable row level security;
+alter table public.nutrition_references enable row level security;
 
 create policy "profiles_select_own" on public.profiles
   for select using (auth.uid() = id);
@@ -111,3 +133,15 @@ create policy "meal_items_delete_via_parent" on public.meal_items
         and public.meals.user_id = auth.uid()
     )
   );
+
+create policy "nutrition_references_select_own" on public.nutrition_references
+  for select using (auth.uid() = user_id);
+
+create policy "nutrition_references_insert_own" on public.nutrition_references
+  for insert with check (auth.uid() = user_id);
+
+create policy "nutrition_references_update_own" on public.nutrition_references
+  for update using (auth.uid() = user_id);
+
+create policy "nutrition_references_delete_own" on public.nutrition_references
+  for delete using (auth.uid() = user_id);

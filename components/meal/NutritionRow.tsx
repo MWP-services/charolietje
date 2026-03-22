@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { colors } from '@/constants/colors';
 import type { AnalyzedMealItem } from '@/types/meal';
 import { formatCalories, formatFoodName, formatUnit } from '@/utils/formatting';
+import { hasCompleteNutrition } from '@/utils/nutrition';
 
 type NutritionRowProps = {
   item: AnalyzedMealItem;
@@ -20,8 +21,14 @@ export const NutritionRow = ({ item }: NutritionRowProps) => (
       <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold', flex: 1 }}>{formatFoodName(item.name)}</Text>
       <Text style={{ color: colors.text, fontSize: 14, fontFamily: 'Manrope_700Bold' }}>{formatCalories(item.calories)}</Text>
     </View>
-    <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-      {item.quantity} {formatUnit(item.unit)} - {Math.round(item.protein)}g eiwit - {Math.round(item.carbs)}g koolhydraten - {Math.round(item.fat)}g vet
-    </Text>
+    {hasCompleteNutrition(item) ? (
+      <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
+        {item.quantity} {formatUnit(item.unit)} - {Math.round(item.protein ?? 0)}g eiwit - {Math.round(item.carbs ?? 0)}g koolhydraten - {Math.round(item.fat ?? 0)}g vet
+      </Text>
+    ) : (
+      <Text style={{ color: colors.danger, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
+        {item.quantity} {formatUnit(item.unit)} - voedingswaarde onbekend, handmatig invullen nodig
+      </Text>
+    )}
   </View>
 );

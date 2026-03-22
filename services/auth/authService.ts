@@ -5,6 +5,7 @@ import { buildSeedProfile } from '@/constants/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { mealRepository } from '@/repositories/mealRepository';
 import { profileRepository } from '@/repositories/profileRepository';
+import { nutritionReferenceRepository } from '@/repositories/nutritionReferenceRepository';
 import type { AppSession, AuthRedirectResult, AuthSignUpResult } from '@/types/auth';
 
 const mockSessionKey = 'nutrivoice:mock-session';
@@ -49,7 +50,12 @@ const buildAuthRedirectUrl = () => Linking.createURL('/auth/callback');
 const isLocalOnlySession = (session: AppSession) => session.provider === 'guest' || session.provider === 'mock';
 
 const clearLocalAccountData = async (userId: string) => {
-  await Promise.all([profileRepository.clearLocalProfile(userId), mealRepository.clearLocalMeals(userId), persistMockSession(null)]);
+  await Promise.all([
+    profileRepository.clearLocalProfile(userId),
+    mealRepository.clearLocalMeals(userId),
+    nutritionReferenceRepository.clearLocalReferences(userId),
+    persistMockSession(null),
+  ]);
 };
 
 const normalizeVerificationType = (type: string | null): VerificationType | null => {

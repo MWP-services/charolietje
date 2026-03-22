@@ -2,8 +2,9 @@ import { create } from 'zustand';
 
 import { aiService } from '@/services/ai/aiService';
 import { mealService } from '@/services/meals/mealService';
-import type { AnalyzedMeal, MealWithItems } from '@/types/meal';
+import type { AnalyzedMeal, AnalyzedMealItem, MealWithItems } from '@/types/meal';
 import { sortMealsByCreatedAt } from '@/utils/date';
+import { calculateMealTotals, getMissingNutritionLabels, hasCompleteNutrition } from '@/utils/nutrition';
 
 type MealState = {
   meals: MealWithItems[];
@@ -18,7 +19,8 @@ type MealState = {
   clearMeals: () => void;
   loadMeals: (userId: string) => Promise<MealWithItems[]>;
   setDraftText: (text: string) => void;
-  analyzeDraft: () => Promise<AnalyzedMeal>;
+  analyzeDraft: (userId?: string | null) => Promise<AnalyzedMeal>;
+  updateDraftItem: (index: number, updates: Partial<AnalyzedMealItem>) => void;
   clearDraft: () => void;
   saveDraft: (userId: string) => Promise<MealWithItems>;
   deleteMeal: (userId: string, mealId: string) => Promise<void>;
@@ -49,7 +51,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   setDraftText(text) {
     set({ draftText: text, draftAnalysis: null, error: null });
   },
-  async analyzeDraft() {
+  async analyzeDraft(userId) {
     const text = get().draftText.trim();
     if (!text) {
       throw new Error('Voer eerst een maaltijdomschrijving in voordat je analyseert');
@@ -57,7 +59,7 @@ export const useMealStore = create<MealState>((set, get) => ({
 
     set({ isAnalyzing: true, error: null });
     try {
-      const analysis = await aiService.analyzeText(text);
+      const analysis = await aiService.analyzeText(text, userId);
       set({ draftAnalysis: analysis, isAnalyzing: false });
       return analysis;
     } catch (error) {
@@ -65,6 +67,22 @@ export const useMealStore = create<MealState>((set, get) => ({
       set({ isAnalyzing: false, error: message });
       throw error;
     }
+  },
+  updateDraftItem(index, updates) {
+    set((state) => {
+      if (!state.draftAnalysis) {
+        return state;
+      }
+
+      const items = state.draftAnalysis.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...updates } : item));
+      return {
+        draftAnalysis: {
+          ...state.draftAnalysis,
+          items,
+          totals: calculateMealTotals(items),
+        },
+      };
+    });
   },
   clearDraft() {
     set({ draftText: '', draftAnalysis: null, error: null, lastSavedMealId: null });
@@ -88,6 +106,12 @@ export const useMealStore = create<MealState>((set, get) => ({
     const { draftText, draftAnalysis, meals } = get();
     if (!draftAnalysis) {
       throw new Error('Analyseer eerst een maaltijd voordat je opslaat');
+    }
+
+    const unresolvedItem = draftAnalysis.items.find((item) => !hasCompleteNutrition(item));
+    if (unresolvedItem) {
+      const missingLabels = getMissingNutritionLabels(unresolvedItem).join(', ');
+      throw new Error(`Vul eerst de ontbrekende voedingswaarden in voor ${unresolvedItem.name}. Ontbrekend: ${missingLabels}.`);
     }
 
     set({ isSaving: true, error: null });

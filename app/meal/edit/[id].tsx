@@ -12,20 +12,24 @@ import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealTypeSelector } from '@/components/meal/MealTypeSelector';
+import { NutritionInputs } from '@/components/meal/NutritionInputs';
 import { colors } from '@/constants/colors';
 import { useMeals } from '@/hooks/useMeals';
 import { aiService } from '@/services/ai/aiService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
+import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import type { MealItem, MealType } from '@/types/meal';
+import type { NutrientKey } from '@/types/nutrition';
 import { createId, createUuid } from '@/utils/id';
-import { calculateMealTotals, toMealTotalsRecord } from '@/utils/nutrition';
+import { calculateMealTotals, emptyOptionalNutrients, getMissingNutritionLabels, hasCompleteNutrition, toMealTotalsRecord } from '@/utils/nutrition';
 
 export default function EditMealScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const meals = useMeals();
   const meal = meals.find((entry) => entry.id === id);
+  const session = useAuthStore((state) => state.session);
   const updateMeal = useMealStore((state) => state.updateMeal);
   const [text, setText] = useState(meal?.original_text ?? '');
   const [mealType, setMealType] = useState<MealType>(meal?.meal_type ?? 'unknown');
@@ -44,6 +48,13 @@ export default function EditMealScreen() {
     setItems((current) => current.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
   };
 
+  const updateItemNutrient = (itemId: string, key: NutrientKey, value: number | null) => {
+    updateItem(itemId, {
+      [key]: value,
+      nutritionSource: 'manual',
+    } as Partial<MealItem>);
+  };
+
   const addItem = () => {
     setItems((current) => [
       ...current,
@@ -53,13 +64,8 @@ export default function EditMealScreen() {
         name: '',
         quantity: 1,
         unit: 'serving',
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        fiber: 0,
-        sugar: 0,
-        sodium: 0,
+        ...emptyOptionalNutrients(),
+        nutritionSource: 'unresolved',
       },
     ]);
   };
@@ -87,7 +93,7 @@ export default function EditMealScreen() {
     try {
       setError(null);
       setIsReparsing(true);
-      const analysis = await aiService.analyzeText(text);
+      const analysis = await aiService.analyzeText(text, session?.userId);
       setMealType(analysis.mealType);
       setItems(
         analysis.items.map((item) => ({
@@ -117,18 +123,47 @@ export default function EditMealScreen() {
     try {
       setIsSaving(true);
       setError(null);
-      const enriched = await nutritionService.getNutritionForItems(
-        items.map((item) => ({
-          name: item.name.trim().toLowerCase(),
-          quantity: item.quantity,
-          unit: item.unit,
-          confidence: item.confidence,
-        })),
-      );
-      const nextItems = enriched.map((item, index) => ({
-        ...items[index],
-        ...item,
-      }));
+      const itemsNeedingLookup = items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => !hasCompleteNutrition(item));
+
+      let nextItems = items;
+
+      if (itemsNeedingLookup.length) {
+        const enriched = await nutritionService.getNutritionForItems(
+          itemsNeedingLookup.map(({ item }) => ({
+            name: item.name.trim().toLowerCase(),
+            quantity: item.quantity,
+            unit: item.unit,
+            confidence: item.confidence,
+          })),
+          session?.userId,
+        );
+
+        nextItems = items.map((item) => ({ ...item }));
+        itemsNeedingLookup.forEach(({ index, item }, lookupIndex) => {
+          const resolved = enriched[lookupIndex];
+          nextItems[index] = {
+            ...nextItems[index],
+            unit: resolved.unit,
+            calories: item.calories ?? resolved.calories,
+            protein: item.protein ?? resolved.protein,
+            carbs: item.carbs ?? resolved.carbs,
+            fat: item.fat ?? resolved.fat,
+            fiber: item.fiber ?? resolved.fiber,
+            sugar: item.sugar ?? resolved.sugar,
+            sodium: item.sodium ?? resolved.sodium,
+            nutritionSource: item.nutritionSource === 'manual' ? 'manual' : resolved.nutritionSource,
+          };
+        });
+      }
+
+      const unresolvedItem = nextItems.find((item) => !hasCompleteNutrition(item));
+      if (unresolvedItem) {
+        setError(`Vul eerst alle ontbrekende voedingswaarden in voor ${unresolvedItem.name}. Ontbrekend: ${getMissingNutritionLabels(unresolvedItem).join(', ')}.`);
+        return;
+      }
+
       const totals = calculateMealTotals(nextItems);
 
       await updateMeal({
@@ -186,8 +221,11 @@ export default function EditMealScreen() {
                 </View>
               </View>
               <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-                Voorbeeld: {Math.round(item.calories)} kcal - {Math.round(item.protein)}g eiwit - {Math.round(item.carbs)}g koolhydraten - {Math.round(item.fat)}g vet
+                {hasCompleteNutrition(item)
+                  ? `Voorbeeld: ${Math.round(item.calories ?? 0)} kcal - ${Math.round(item.protein ?? 0)}g eiwit - ${Math.round(item.carbs ?? 0)}g koolhydraten - ${Math.round(item.fat ?? 0)}g vet`
+                  : `Voedingswaarde ontbreekt nog: ${getMissingNutritionLabels(item).join(', ')}`}
               </Text>
+              <NutritionInputs onChange={(key, value) => updateItemNutrient(item.id, key, value)} values={item} />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <SecondaryButton label="Item dupliceren" onPress={() => duplicateItem(item)} />
@@ -205,6 +243,13 @@ export default function EditMealScreen() {
       <FadeInView delay={140}>
         <Card style={{ gap: 8 }}>
           <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Herberekende preview</Text>
+          {items.some((item) => !hasCompleteNutrition(item)) ? (
+            <InlineMessage
+              description="De preview telt alleen de bekende waardes mee totdat je de ontbrekende velden hebt ingevuld."
+              title="Preview is nog niet volledig"
+              tone="info"
+            />
+          ) : null}
           <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
             {Math.round(previewTotals.calories)} kcal - {Math.round(previewTotals.protein)}g eiwit - {Math.round(previewTotals.carbs)}g koolhydraten - {Math.round(previewTotals.fat)}g vet
           </Text>

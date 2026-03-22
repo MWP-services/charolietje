@@ -1,6 +1,7 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const mealSchema = {
@@ -81,7 +82,7 @@ Deno.serve(async (request) => {
           {
             role: 'system',
             content:
-              'Extract foods from meal descriptions. The user may write in Dutch or English. Return canonical ingredient names in English where practical, estimate quantities conservatively, classify meal type, and never invent obviously unrelated foods.',
+              'Extract foods from meal descriptions. The user may write in Dutch or English. Return canonical ingredient names in English where practical, estimate quantities conservatively, classify meal type, and never invent obviously unrelated foods. Standardize units where possible: prefer gram for solids, ml for drinks, and piece, slice, or serving only when volume or weight is genuinely unknown. Convert cups, glasses, mugs, and coffee servings into approximate ml when you can.',
           },
           {
             role: 'user',

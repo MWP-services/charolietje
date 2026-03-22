@@ -1,12 +1,12 @@
 import type { GoalType } from '@/types/profile';
 
-export const formatCalories = (value: number) => `${Math.round(value)} kcal`;
+export const formatCalories = (value: number | null) => (value === null ? 'Onbekend' : `${Math.round(value)} kcal`);
 
-export const formatGrams = (value: number) => `${Math.round(value)} g`;
+export const formatGrams = (value: number | null) => (value === null ? 'Onbekend' : `${Math.round(value)} g`);
 
-export const formatMilligrams = (value: number) => `${Math.round(value)} mg`;
+export const formatMilligrams = (value: number | null) => (value === null ? 'Onbekend' : `${Math.round(value)} mg`);
 
-export const formatNutrientValue = (label: string, value: number) => {
+export const formatNutrientValue = (label: string, value: number | null) => {
   if (label.toLowerCase() === 'sodium') {
     return formatMilligrams(value);
   }

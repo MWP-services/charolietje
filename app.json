@@ -10,7 +10,7 @@
     "userInterfaceStyle": "light",
     "primaryColor": "#18B67A",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/Welcome.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -43,7 +43,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/app-icon-welcome.png",
       "themeColor": "#18B67A"
     },
     "plugins": [

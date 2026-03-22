@@ -59,6 +59,37 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(zwarte koffie|black coffee|koffie|coffee)/.test(normalized)) {
+    const cups = extractQuantity(normalized, /(\d+)\s*(kop|koppen|kopje|kopjes|cup|cups|mug|mugs|mok|mokken)\s*(zwarte koffie|black coffee|koffie|coffee)?/, 1);
+    items.push({
+      name: 'black coffee',
+      quantity: cups * 240,
+      unit: 'ml',
+      confidence: 0.92,
+    });
+  }
+
+  if (/(thee|tea)/.test(normalized)) {
+    const cups = extractQuantity(normalized, /(\d+)\s*(kop|koppen|kopje|kopjes|cup|cups|mug|mugs|mok|mokken)\s*(thee|tea)?/, 1);
+    items.push({
+      name: 'tea',
+      quantity: cups * 240,
+      unit: 'ml',
+      confidence: 0.9,
+    });
+  }
+
+  if (/(water)/.test(normalized)) {
+    items.push({
+      name: 'water',
+      quantity: /(glas|glazen|glass|glasses)/.test(normalized)
+        ? extractQuantity(normalized, /(\d+)\s*(glas|glazen|glass|glasses)\s*(water)?/, 1) * 250
+        : extractQuantity(normalized, /(\d+)\s*(ml)\s*(water)?/, 250),
+      unit: 'ml',
+      confidence: 0.91,
+    });
+  }
+
   if (/(chicken sandwich|kip sandwich|sandwich met kip|broodje kip)/.test(normalized)) {
     items.push({
       name: 'chicken sandwich',
@@ -220,9 +251,9 @@ export const aiService = {
 
     return parseMealTextWithOpenAI(text);
   },
-  async analyzeText(text: string): Promise<AnalyzedMeal> {
+  async analyzeText(text: string, userId?: string | null): Promise<AnalyzedMeal> {
     const parsed = await this.parseMealText(text);
-    const items = await nutritionService.getNutritionForItems(parsed.items);
+    const items = await nutritionService.getNutritionForItems(parsed.items, userId);
     return {
       mealType: parsed.mealType,
       originalText: text,

@@ -124,7 +124,7 @@ export default function VoiceLogMealScreen() {
 
   const onAnalyze = async () => {
     try {
-      await analyzeDraft();
+      await analyzeDraft(session?.userId);
       router.push('/meal/result');
     } catch (error) {
       Alert.alert('Analyse mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
