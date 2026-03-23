@@ -123,6 +123,14 @@ export default function PremiumAdviceScreen() {
             </Text>
           </Card>
 
+          <Card style={{ gap: 12 }}>
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Snelle productscan</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
+              Scan een streepjescode van een verpakking en stuur het product direct door naar de maaltijdanalyse, waar je de gekozen voedingswaardes nog kunt aanpassen.
+            </Text>
+            <PrimaryButton label="Barcode scannen" onPress={() => router.push('/meal/barcode-scan')} />
+          </Card>
+
           <Card style={{ gap: 8 }}>
             <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Patroon dat opvalt</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>

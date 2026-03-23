@@ -9,6 +9,9 @@ const normalizeName = (name: string) =>
   name
     .trim()
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[()%,/]+/g, ' ')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ');
 
@@ -39,6 +42,14 @@ const normalizeUnit = (unit: string) => {
     case 'glas':
     case 'glazen':
       return 'glass';
+    case 'bowl':
+    case 'bowls':
+    case 'kom':
+    case 'kommen':
+    case 'bak':
+    case 'bakje':
+    case 'bakjes':
+      return 'bowl';
     case 'mug':
     case 'mugs':
     case 'mok':
@@ -60,12 +71,47 @@ const normalizeUnit = (unit: string) => {
     case 'pieces':
     case 'stuk':
     case 'stuks':
+    case 'reep':
+    case 'repen':
+    case 'bar':
+    case 'bars':
       return 'piece';
     case 'slice':
     case 'slices':
     case 'sneetje':
     case 'sneetjes':
       return 'slice';
+    case 'hand':
+    case 'handful':
+    case 'handfuls':
+    case 'handje':
+    case 'handjes':
+      return 'handful';
+    case 'scoop':
+    case 'scoops':
+    case 'schep':
+    case 'scheppen':
+      return 'scoop';
+    case 'can':
+    case 'cans':
+    case 'blik':
+    case 'blikken':
+      return 'can';
+    case 'bottle':
+    case 'bottles':
+    case 'fles':
+    case 'flessen':
+      return 'bottle';
+    case 'pot':
+    case 'pots':
+      return 'pot';
+    case 'pack':
+    case 'packs':
+    case 'pakket':
+    case 'pakketjes':
+    case 'pak':
+    case 'pakken':
+      return 'pack';
     case 'serving':
     case 'servings':
     case 'portie':

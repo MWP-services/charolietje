@@ -11,6 +11,7 @@ export const premiumLaunchPlan = {
     'Patroonherkenning voor eiwit, vezels, snacks en calorieverdeling',
     'Concreet volgende-maaltijd advies zodat je direct weet wat slim is om hierna te eten',
     'Persoonlijke aandachtspunten en sterke punten op basis van je recente logs',
+    'Barcode scannen om verpakte producten sneller te herkennen en direct te controleren',
   ],
   reassurance: 'Geen betaalstap nodig. Je activeert premium direct in de app.',
 } as const;

@@ -90,6 +90,48 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(sinaasappelsap|orange juice|jus)/.test(normalized)) {
+    items.push({
+      name: 'orange juice',
+      quantity: /(glas|glazen|glass|glasses)/.test(normalized)
+        ? extractQuantity(normalized, /(\d+)\s*(glas|glazen|glass|glasses)\s*(sinaasappelsap|orange juice|jus)?/, 1) * 250
+        : extractQuantity(normalized, /(\d+)\s*(ml)\s*(sinaasappelsap|orange juice|jus)?/, 250),
+      unit: 'ml',
+      confidence: 0.9,
+    });
+  }
+
+  if (/(cola zero|cola light|coca cola zero)/.test(normalized)) {
+    items.push({
+      name: 'cola zero',
+      quantity: /(blik|blikken|can|cans)/.test(normalized)
+        ? extractQuantity(normalized, /(\d+)\s*(blik|blikken|can|cans)\s*(cola zero|cola light|coca cola zero)?/, 1) * 330
+        : extractQuantity(normalized, /(\d+)\s*(ml)\s*(cola zero|cola light|coca cola zero)?/, 330),
+      unit: 'ml',
+      confidence: 0.88,
+    });
+  }
+
+  if (/(cola|frisdrank)/.test(normalized) && !/(cola zero|cola light|coca cola zero)/.test(normalized)) {
+    items.push({
+      name: 'cola',
+      quantity: /(blik|blikken|can|cans|glas|glazen|glass|glasses)/.test(normalized)
+        ? extractQuantity(normalized, /(\d+)\s*(blik|blikken|can|cans|glas|glazen|glass|glasses)\s*(cola|frisdrank)?/, 1) * 330
+        : extractQuantity(normalized, /(\d+)\s*(ml)\s*(cola|frisdrank)?/, 330),
+      unit: 'ml',
+      confidence: 0.86,
+    });
+  }
+
+  if (/(chocomel|chocolademelk|chocolate milk)/.test(normalized)) {
+    items.push({
+      name: 'chocolate milk',
+      quantity: extractQuantity(normalized, /(\d+)\s*(ml)\s*(chocomel|chocolademelk|chocolate milk)/, 250),
+      unit: 'ml',
+      confidence: 0.87,
+    });
+  }
+
   if (/(chicken sandwich|kip sandwich|sandwich met kip|broodje kip)/.test(normalized)) {
     items.push({
       name: 'chicken sandwich',
@@ -117,10 +159,46 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(sinaasappel|orange)/.test(normalized)) {
+    items.push({
+      name: 'orange',
+      quantity: extractQuantity(normalized, /(\d+)\s*(sinaasappel|orange)/, 1),
+      unit: 'piece',
+      confidence: 0.9,
+    });
+  }
+
+  if (/(blauwe bessen|blueberries|blauwebessen)/.test(normalized)) {
+    items.push({
+      name: 'blueberries',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(blauwe bessen|blueberries|blauwebessen)/, 100),
+      unit: 'gram',
+      confidence: 0.86,
+    });
+  }
+
+  if (/(aardbeien|strawberries)/.test(normalized)) {
+    items.push({
+      name: 'strawberries',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(aardbeien|strawberries)/, 100),
+      unit: 'gram',
+      confidence: 0.86,
+    });
+  }
+
   if (/(rijst|rice)/.test(normalized)) {
     items.push({
       name: 'rice',
       quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(rijst|rice)/, 180),
+      unit: 'gram',
+      confidence: 0.84,
+    });
+  }
+
+  if (/(zilvervliesrijst|brown rice)/.test(normalized)) {
+    items.push({
+      name: 'brown rice',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(zilvervliesrijst|brown rice)/, 180),
       unit: 'gram',
       confidence: 0.84,
     });
@@ -135,12 +213,176 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(kipfilet|kip borst|chicken breast|kip)/.test(normalized) && !/(kipsandwich|kip sandwich|broodje kip)/.test(normalized)) {
+    items.push({
+      name: 'chicken breast',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(kipfilet|kip borst|chicken breast|kip)/, 150),
+      unit: 'gram',
+      confidence: 0.87,
+    });
+  }
+
+  if (/(kalkoen|turkey)/.test(normalized)) {
+    items.push({
+      name: 'turkey slices',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|plak|plakken|slice|slices)\s*(kalkoen|turkey)/, 40),
+      unit: /(plak|plakken|slice|slices)/.test(normalized) ? 'piece' : 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(ham)/.test(normalized)) {
+    items.push({
+      name: 'ham',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|plak|plakken|slice|slices)\s*(ham)/, 30),
+      unit: /(plak|plakken|slice|slices)/.test(normalized) ? 'piece' : 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(tonijn|tuna)/.test(normalized)) {
+    items.push({
+      name: 'tuna',
+      quantity: /(blik|blikken|can|cans)/.test(normalized)
+        ? extractQuantity(normalized, /(\d+)\s*(blik|blikken|can|cans)\s*(tonijn|tuna)?/, 1) * 120
+        : extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(tonijn|tuna)/, 120),
+      unit: 'gram',
+      confidence: 0.83,
+    });
+  }
+
+  if (/(gehakt|beef mince|rundergehakt)/.test(normalized)) {
+    items.push({
+      name: 'beef mince',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(gehakt|beef mince|rundergehakt)/, 150),
+      unit: 'gram',
+      confidence: 0.82,
+    });
+  }
+
   if (/(groenten|vegetables|groente)/.test(normalized)) {
     items.push({
       name: 'vegetables',
       quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(groenten|vegetables|groente)/, 150),
       unit: 'gram',
       confidence: 0.85,
+    });
+  }
+
+  if (/(broccoli)/.test(normalized)) {
+    items.push({
+      name: 'broccoli',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(broccoli)/, 150),
+      unit: 'gram',
+      confidence: 0.84,
+    });
+  }
+
+  if (/(spinazie|spinach)/.test(normalized)) {
+    items.push({
+      name: 'spinach',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(spinazie|spinach)/, 150),
+      unit: 'gram',
+      confidence: 0.84,
+    });
+  }
+
+  if (/(komkommer|cucumber)/.test(normalized)) {
+    items.push({
+      name: 'cucumber',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(komkommer|cucumber)/, 100),
+      unit: 'gram',
+      confidence: 0.83,
+    });
+  }
+
+  if (/(tomaat|tomaten|tomato)/.test(normalized)) {
+    items.push({
+      name: 'tomato',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|tomaat|tomaten|tomato)/, 100),
+      unit: /(gram|g)/.test(normalized) ? 'gram' : 'piece',
+      confidence: 0.83,
+    });
+  }
+
+  if (/(sla|lettuce)/.test(normalized)) {
+    items.push({
+      name: 'lettuce',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(sla|lettuce)/, 75),
+      unit: 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(ui|uien|onion)/.test(normalized)) {
+    items.push({
+      name: 'onion',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|ui|uien|onion)/, 80),
+      unit: /(gram|g)/.test(normalized) ? 'gram' : 'piece',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(wortel|wortelen|carrot)/.test(normalized)) {
+    items.push({
+      name: 'carrot',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|wortel|wortelen|carrot)/, 100),
+      unit: /(gram|g)/.test(normalized) ? 'gram' : 'piece',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(paprika|bell pepper)/.test(normalized)) {
+    items.push({
+      name: 'bell pepper',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|paprika|bell pepper)/, 100),
+      unit: /(gram|g)/.test(normalized) ? 'gram' : 'piece',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(aardappel|aardappelen|potato)/.test(normalized) && !/(zoete aardappel|sweet potato)/.test(normalized)) {
+    items.push({
+      name: 'potatoes',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(aardappel|aardappelen|potato)/, 200),
+      unit: 'gram',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(zoete aardappel|sweet potato)/.test(normalized)) {
+    items.push({
+      name: 'sweet potato',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(zoete aardappel|sweet potato)/, 200),
+      unit: 'gram',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(bonen|beans|kidneybonen)/.test(normalized)) {
+    items.push({
+      name: 'beans',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(bonen|beans|kidneybonen)/, 130),
+      unit: 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(linzen|lentils)/.test(normalized)) {
+    items.push({
+      name: 'lentils',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(linzen|lentils)/, 130),
+      unit: 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(kikkererwten|chickpeas)/.test(normalized)) {
+    items.push({
+      name: 'chickpeas',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(kikkererwten|chickpeas)/, 130),
+      unit: 'gram',
+      confidence: 0.8,
     });
   }
 
@@ -153,12 +395,75 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(griekse yoghurt|greek yogurt)/.test(normalized)) {
+    items.push({
+      name: 'greek yogurt',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(griekse yoghurt|greek yogurt)/, 200),
+      unit: 'gram',
+      confidence: 0.87,
+    });
+  }
+
+  if (/(kwark|quark)/.test(normalized)) {
+    items.push({
+      name: 'quark',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(kwark|quark)/, 200),
+      unit: 'gram',
+      confidence: 0.87,
+    });
+  }
+
+  if (/(yoghurt|yogurt)/.test(normalized) && !/(griekse yoghurt|greek yogurt|proteine yoghurt|protein yogurt|eiwit yoghurt)/.test(normalized)) {
+    items.push({
+      name: 'yogurt',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|ml)\s*(yoghurt|yogurt)/, 200),
+      unit: /(ml)/.test(normalized) ? 'ml' : 'gram',
+      confidence: 0.84,
+    });
+  }
+
+  if (/(huttenkaas|hüttenkäse|cottage cheese)/.test(normalized)) {
+    items.push({
+      name: 'cottage cheese',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(huttenkaas|hüttenkäse|cottage cheese)/, 150),
+      unit: 'gram',
+      confidence: 0.83,
+    });
+  }
+
   if (/(havermout|oats)/.test(normalized)) {
     items.push({
       name: 'oats',
       quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(havermout|oats)/, 60),
       unit: 'gram',
       confidence: 0.85,
+    });
+  }
+
+  if (/(muesli)/.test(normalized)) {
+    items.push({
+      name: 'muesli',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(muesli)/, 50),
+      unit: 'gram',
+      confidence: 0.83,
+    });
+  }
+
+  if (/(granola)/.test(normalized)) {
+    items.push({
+      name: 'granola',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(granola)/, 50),
+      unit: 'gram',
+      confidence: 0.83,
+    });
+  }
+
+  if (/(whey|eiwitshake|proteineshake|proteinepoeder)/.test(normalized)) {
+    items.push({
+      name: 'whey protein',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|scoop|scoops|schep|scheppen)\s*(whey|eiwitshake|proteineshake|proteinepoeder)/, 30),
+      unit: /(scoop|scoops|schep|scheppen)/.test(normalized) ? 'scoop' : 'gram',
+      confidence: 0.86,
     });
   }
 
@@ -180,6 +485,33 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(amandelen|almonds)/.test(normalized)) {
+    items.push({
+      name: 'almonds',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|handje|handjes|handful)\s*(amandelen|almonds)/, 30),
+      unit: /(handje|handjes|handful)/.test(normalized) ? 'handful' : 'gram',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(walnoten|walnuts)/.test(normalized)) {
+    items.push({
+      name: 'walnuts',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|handje|handjes|handful)\s*(walnoten|walnuts)/, 30),
+      unit: /(handje|handjes|handful)/.test(normalized) ? 'handful' : 'gram',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(cashewnoten|cashews)/.test(normalized)) {
+    items.push({
+      name: 'cashews',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|handje|handjes|handful)\s*(cashewnoten|cashews)/, 30),
+      unit: /(handje|handjes|handful)/.test(normalized) ? 'handful' : 'gram',
+      confidence: 0.82,
+    });
+  }
+
   if (/(leverworst|liverwurst|leverpastei)/.test(normalized)) {
     items.push({
       name: 'liverwurst',
@@ -195,6 +527,60 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
       quantity: extractQuantity(normalized, /(\d+)\s*(stroopwafel|stroopwafels)/, 1),
       unit: 'piece',
       confidence: 0.83,
+    });
+  }
+
+  if (/(rijstwafel|rijstwafels|rice cake|rice cakes)/.test(normalized)) {
+    items.push({
+      name: 'rice cakes',
+      quantity: extractQuantity(normalized, /(\d+)\s*(rijstwafel|rijstwafels|rice cake|rice cakes)/, 2),
+      unit: 'piece',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(cracker|crackers)/.test(normalized)) {
+    items.push({
+      name: 'crackers',
+      quantity: extractQuantity(normalized, /(\d+)\s*(cracker|crackers)/, 2),
+      unit: 'piece',
+      confidence: 0.82,
+    });
+  }
+
+  if (/(wrap|wraps|tortilla)/.test(normalized)) {
+    items.push({
+      name: 'wrap',
+      quantity: extractQuantity(normalized, /(\d+)\s*(wrap|wraps|tortilla)/, 1),
+      unit: 'piece',
+      confidence: 0.84,
+    });
+  }
+
+  if (/(kaas|cheese)/.test(normalized) && !/(huttenkaas|hüttenkäse|cottage cheese)/.test(normalized)) {
+    items.push({
+      name: 'cheese',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|plak|plakken|slice|slices)\s*(kaas|cheese)/, 20),
+      unit: /(plak|plakken|slice|slices)/.test(normalized) ? 'piece' : 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(pastasaus|tomatensaus|pasta sauce)/.test(normalized)) {
+    items.push({
+      name: 'pasta sauce',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|ml)\s*(pastasaus|tomatensaus|pasta sauce)/, 125),
+      unit: /(ml)/.test(normalized) ? 'ml' : 'gram',
+      confidence: 0.78,
+    });
+  }
+
+  if (/(eiwitreep|proteinebar|protein bar)/.test(normalized)) {
+    items.push({
+      name: 'protein bar',
+      quantity: extractQuantity(normalized, /(\d+)\s*(eiwitreep|proteinebar|protein bar)/, 1),
+      unit: 'piece',
+      confidence: 0.82,
     });
   }
 

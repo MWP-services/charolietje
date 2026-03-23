@@ -2,7 +2,7 @@
   "expo": {
     "name": "NutriVoice",
     "slug": "nutrivoice",
-    "version": "1.1.3",
+    "version": "1.3.0",
     "description": "NutriVoice is een voice-first voedingsapp waarmee gebruikers maaltijden kunnen loggen, voedingswaarden volgen en AI-gedreven coaching ontvangen.",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-welcome.png",
@@ -20,6 +20,7 @@
       "supportsTablet": false,
       "requireFullScreen": true,
       "infoPlist": {
+        "NSCameraUsageDescription": "NutriVoice gebruikt je camera om streepjescodes van producten te scannen.",
         "NSMicrophoneUsageDescription": "NutriVoice gebruikt je microfoon om maaltijden op te nemen en om te zetten naar tekst."
       },
       "config": {
@@ -30,6 +31,7 @@
       "package": "com.nutrivoice.app",
       "versionCode": 1,
       "permissions": [
+        "CAMERA",
         "RECORD_AUDIO",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
@@ -48,7 +50,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NutriVoice gebruikt je camera om streepjescodes van producten te scannen.",
+          "microphonePermission": "NutriVoice gebruikt je microfoon om maaltijden op te nemen en om te zetten naar tekst.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": true
+        }
+      ]
     ],
     "runtimeVersion": {
       "policy": "appVersion"

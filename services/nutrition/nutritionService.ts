@@ -17,8 +17,17 @@ const volumeUnitToMilliliters: Record<string, number> = {
   cup: 240,
   glass: 250,
   mug: 300,
+  bowl: 350,
   tbsp: 15,
   tsp: 5,
+  bottle: 500,
+  can: 330,
+  pot: 150,
+};
+const weightUnitToGrams: Record<string, number> = {
+  handful: 30,
+  scoop: 30,
+  pack: 100,
 };
 
 const normalizeUnit = (unit: string) => {
@@ -48,6 +57,14 @@ const normalizeUnit = (unit: string) => {
     case 'glas':
     case 'glazen':
       return 'glass';
+    case 'bowl':
+    case 'bowls':
+    case 'kom':
+    case 'kommen':
+    case 'bak':
+    case 'bakje':
+    case 'bakjes':
+      return 'bowl';
     case 'mug':
     case 'mugs':
     case 'mok':
@@ -69,12 +86,47 @@ const normalizeUnit = (unit: string) => {
     case 'pieces':
     case 'stuk':
     case 'stuks':
+    case 'reep':
+    case 'repen':
+    case 'bar':
+    case 'bars':
       return 'piece';
     case 'slice':
     case 'slices':
     case 'sneetje':
     case 'sneetjes':
       return 'slice';
+    case 'hand':
+    case 'handful':
+    case 'handfuls':
+    case 'handje':
+    case 'handjes':
+      return 'handful';
+    case 'scoop':
+    case 'scoops':
+    case 'schep':
+    case 'scheppen':
+      return 'scoop';
+    case 'can':
+    case 'cans':
+    case 'blik':
+    case 'blikken':
+      return 'can';
+    case 'bottle':
+    case 'bottles':
+    case 'fles':
+    case 'flessen':
+      return 'bottle';
+    case 'pot':
+    case 'pots':
+      return 'pot';
+    case 'pack':
+    case 'packs':
+    case 'pakket':
+    case 'pakketjes':
+    case 'pak':
+    case 'pakken':
+      return 'pack';
     case 'serving':
     case 'servings':
     case 'portie':
@@ -97,35 +149,127 @@ const nameAliases: Record<string, string> = {
   koffie: 'black coffee',
   'zwarte koffie': 'black coffee',
   'black coffee': 'black coffee',
+  cappuccino: 'coffee with milk',
+  latte: 'coffee with milk',
+  'koffie verkeerd': 'coffee with milk',
   tea: 'tea',
   thee: 'tea',
   water: 'water',
   watertje: 'water',
+  sinaasappelsap: 'orange juice',
+  jus: 'orange juice',
+  cola: 'cola',
+  coca: 'cola',
+  frisdrank: 'cola',
+  'cola zero': 'cola zero',
+  'cola light': 'cola zero',
+  'coca cola zero': 'cola zero',
+  chocomel: 'chocolate milk',
+  chocolademelk: 'chocolate milk',
   milk: 'semi-skimmed milk',
   melk: 'semi-skimmed milk',
   'halfvolle melk': 'semi-skimmed milk',
+  'magere melk': 'skim milk',
   'semi skimmed milk': 'semi-skimmed milk',
+  yoghurt: 'yogurt',
+  yogurt: 'yogurt',
+  kwark: 'quark',
+  'magere kwark': 'quark',
+  'griekse yoghurt': 'greek yogurt',
+  'griekse yogurt': 'greek yogurt',
+  huttenkaas: 'cottage cheese',
+  huttenkase: 'cottage cheese',
+  'hüttenkäse': 'cottage cheese',
+  kaas: 'cheese',
+  kip: 'chicken breast',
+  kipfilet: 'chicken breast',
+  kipborst: 'chicken breast',
+  kalkoen: 'turkey slices',
+  kalkoenfilet: 'turkey slices',
+  ham: 'ham',
+  tonijn: 'tuna',
+  gehakt: 'beef mince',
+  rundergehakt: 'beef mince',
   'chicken sandwich': 'chicken sandwich',
   kipsandwich: 'chicken sandwich',
   'kip sandwich': 'chicken sandwich',
+  wrap: 'wrap',
+  wraps: 'wrap',
+  tortilla: 'wrap',
+  tortillawrap: 'wrap',
   appel: 'apple',
   banaan: 'banana',
+  sinaasappel: 'orange',
+  blauwebessen: 'blueberries',
+  aardbeien: 'strawberries',
   rijst: 'rice',
+  zilvervliesrijst: 'brown rice',
   zalm: 'salmon',
   groenten: 'vegetables',
   groente: 'vegetables',
+  aardappel: 'potatoes',
+  aardappelen: 'potatoes',
+  'zoete aardappel': 'sweet potato',
+  broccoli: 'broccoli',
+  spinazie: 'spinach',
+  komkommer: 'cucumber',
+  tomaat: 'tomato',
+  tomaten: 'tomato',
+  sla: 'lettuce',
+  ui: 'onion',
+  uien: 'onion',
+  wortel: 'carrot',
+  wortelen: 'carrot',
+  paprika: 'bell pepper',
+  bonen: 'beans',
+  kidneybonen: 'beans',
+  linzen: 'lentils',
+  kikkererwten: 'chickpeas',
   proteineyoghurt: 'protein yogurt',
   'proteine yoghurt': 'protein yogurt',
   eiwityoghurt: 'protein yogurt',
   havermout: 'oats',
+  muesli: 'muesli',
+  granola: 'granola',
+  whey: 'whey protein',
+  eiwitshake: 'whey protein',
+  proteineshake: 'whey protein',
+  proteinepoeder: 'whey protein',
   ei: 'egg',
   eieren: 'egg',
+  amandelen: 'almonds',
+  walnoten: 'walnuts',
+  cashewnoten: 'cashews',
+  rijstwafels: 'rice cakes',
+  rijstwafel: 'rice cakes',
+  crackers: 'crackers',
+  cracker: 'crackers',
   olijfolie: 'olive oil',
+  pastasaus: 'pasta sauce',
+  tomatensaus: 'pasta sauce',
   leverworst: 'liverwurst',
   leverpastei: 'liverwurst',
   'liver sausage': 'liverwurst',
   stroopwafels: 'stroopwafel',
   'syrup waffle': 'stroopwafel',
+  eiwitreep: 'protein bar',
+  proteinebar: 'protein bar',
+};
+
+const getPartialReferenceKey = (normalizedName: string, source: Record<string, NutritionReference>) => {
+  const candidates = Object.keys(source)
+    .filter((key) => {
+      if (key.length < 4 || normalizedName === key) {
+        return false;
+      }
+
+      const keyTokens = key.split(' ');
+      const matchedTokens = keyTokens.filter((token) => normalizedName.includes(token)).length;
+      return normalizedName.includes(key) || key.includes(normalizedName) || matchedTokens === keyTokens.length;
+    })
+    .sort((left, right) => right.length - left.length);
+
+  return candidates[0] ?? null;
 };
 
 const toMilliliters = (quantity: number, unit: string) => {
@@ -150,6 +294,12 @@ const resolveReference = (name: string, unit: string, learnedReferences?: Map<st
     return { reference: learnedReference, normalizedUnit };
   }
 
+  const learnedEntries = learnedReferences ? Object.fromEntries(learnedReferences.entries()) : null;
+  const partialLearnedKey = learnedEntries ? getPartialReferenceKey(normalizedName, learnedEntries) : null;
+  if (partialLearnedKey && learnedReferences?.get(partialLearnedKey)) {
+    return { reference: learnedReferences.get(partialLearnedKey)!, normalizedUnit };
+  }
+
   const directReference = mockNutritionDatabase[normalizedName];
   if (directReference) {
     return { reference: directReference, normalizedUnit };
@@ -158,6 +308,16 @@ const resolveReference = (name: string, unit: string, learnedReferences?: Map<st
   const aliasReferenceKey = nameAliases[normalizedName];
   if (aliasReferenceKey && mockNutritionDatabase[aliasReferenceKey]) {
     return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
+  }
+
+  const partialAliasKey = Object.entries(nameAliases).find(([alias]) => normalizedName.includes(alias))?.[1];
+  if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
+    return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
+  }
+
+  const partialReferenceKey = getPartialReferenceKey(normalizedName, mockNutritionDatabase);
+  if (partialReferenceKey) {
+    return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
   }
 
   return { reference: null, normalizedUnit };
@@ -176,6 +336,12 @@ const getMultiplier = (item: ParsedMealItem, unit: string, reference: NutritionR
   const referenceVolume = toMilliliters(reference.baseQuantity, normalizedReferenceUnit);
   if (currentVolume !== null && referenceVolume !== null && referenceVolume > 0) {
     return currentVolume / referenceVolume;
+  }
+
+  const currentWeight = weightUnitToGrams[normalizedUnit];
+  const referenceWeight = normalizedReferenceUnit === 'gram' ? reference.baseQuantity : weightUnitToGrams[normalizedReferenceUnit];
+  if (currentWeight && referenceWeight) {
+    return (quantity * currentWeight) / referenceWeight;
   }
 
   if (countUnits.has(normalizedUnit) && countUnits.has(normalizedReferenceUnit)) {

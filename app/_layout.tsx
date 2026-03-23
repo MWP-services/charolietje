@@ -121,6 +121,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="meal/log" />
         <Stack.Screen name="meal/result" />
+        <Stack.Screen name="meal/barcode-scan" />
         <Stack.Screen name="meal/[id]" />
         <Stack.Screen name="meal/edit/[id]" />
         <Stack.Screen name="day/[date]" />

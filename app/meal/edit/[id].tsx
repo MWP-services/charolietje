@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { AppHeader } from '@/components/common/AppHeader';
@@ -19,10 +20,11 @@ import { aiService } from '@/services/ai/aiService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
+import { useProfileStore } from '@/store/profileStore';
 import type { MealItem, MealType } from '@/types/meal';
 import type { NutrientKey } from '@/types/nutrition';
 import { createId, createUuid } from '@/utils/id';
-import { calculateMealTotals, emptyOptionalNutrients, getMissingNutritionLabels, hasCompleteNutrition, toMealTotalsRecord } from '@/utils/nutrition';
+import { calculateMealTotals, emptyOptionalNutrients, getMissingNutritionLabels, hasCompleteNutrition, scaleItemNutritionToQuantity, toMealTotalsRecord } from '@/utils/nutrition';
 
 export default function EditMealScreen() {
   const router = useRouter();
@@ -30,7 +32,9 @@ export default function EditMealScreen() {
   const meals = useMeals();
   const meal = meals.find((entry) => entry.id === id);
   const session = useAuthStore((state) => state.session);
+  const profile = useProfileStore((state) => state.profile);
   const updateMeal = useMealStore((state) => state.updateMeal);
+  const consumePendingScannedItem = useMealStore((state) => state.consumePendingScannedItem);
   const [text, setText] = useState(meal?.original_text ?? '');
   const [mealType, setMealType] = useState<MealType>(meal?.meal_type ?? 'unknown');
   const [items, setItems] = useState<MealItem[]>(meal?.items ?? []);
@@ -46,6 +50,15 @@ export default function EditMealScreen() {
 
   const updateItem = (itemId: string, updates: Partial<MealItem>) => {
     setItems((current) => current.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
+  };
+
+  const updateItemPortion = (itemId: string, nextQuantity: number, nextUnit?: string) => {
+    const item = items.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
+
+    updateItem(itemId, scaleItemNutritionToQuantity(item, nextQuantity, nextUnit ?? item.unit));
   };
 
   const updateItemNutrient = (itemId: string, key: NutrientKey, value: number | null) => {
@@ -83,6 +96,53 @@ export default function EditMealScreen() {
   const removeItem = (itemId: string) => {
     setItems((current) => (current.length === 1 ? current : current.filter((entry) => entry.id !== itemId)));
   };
+
+  const openBarcodeScanner = (itemId: string) => {
+    if (!profile?.is_premium) {
+      router.push('/premium/activate');
+      return;
+    }
+
+    router.push({
+      pathname: '/meal/barcode-scan',
+      params: { targetKey: `edit:${meal.id}:${itemId}` },
+    });
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      for (const item of items) {
+        const scannedItem = consumePendingScannedItem(`edit:${meal.id}:${item.id}`);
+        if (!scannedItem) {
+          continue;
+        }
+
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id
+              ? {
+                  ...entry,
+                  name: scannedItem.name,
+                  quantity: scannedItem.quantity,
+                  unit: scannedItem.unit,
+                  calories: scannedItem.calories,
+                  protein: scannedItem.protein,
+                  carbs: scannedItem.carbs,
+                  fat: scannedItem.fat,
+                  fiber: scannedItem.fiber,
+                  sugar: scannedItem.sugar,
+                  sodium: scannedItem.sodium,
+                  confidence: scannedItem.confidence,
+                  nutritionSource: scannedItem.nutritionSource,
+                }
+              : entry,
+          ),
+        );
+        setError(null);
+        break;
+      }
+    }, [consumePendingScannedItem, items, meal.id]),
+  );
 
   const reparseFromText = async () => {
     if (!text.trim()) {
@@ -212,14 +272,18 @@ export default function EditMealScreen() {
                     inputMode="decimal"
                     keyboardType="numeric"
                     label="Hoeveelheid"
-                    onChangeText={(value) => updateItem(item.id, { quantity: Number(value) || 0 })}
+                    onChangeText={(value) => updateItemPortion(item.id, Number(value) || 0)}
                     value={String(item.quantity)}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <FormField autoCapitalize="none" label="Eenheid" onChangeText={(value) => updateItem(item.id, { unit: value })} value={item.unit} />
+                  <FormField autoCapitalize="none" label="Eenheid" onChangeText={(value) => updateItemPortion(item.id, item.quantity, value)} value={item.unit} />
                 </View>
               </View>
+              <SecondaryButton
+                label={profile?.is_premium ? 'Barcode scannen voor dit item' : 'Barcode scannen is premium'}
+                onPress={() => openBarcodeScanner(item.id)}
+              />
               <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
                 {hasCompleteNutrition(item)
                   ? `Voorbeeld: ${Math.round(item.calories ?? 0)} kcal - ${Math.round(item.protein ?? 0)}g eiwit - ${Math.round(item.carbs ?? 0)}g koolhydraten - ${Math.round(item.fat ?? 0)}g vet`
