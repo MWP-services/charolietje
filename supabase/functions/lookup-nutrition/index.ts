@@ -9,6 +9,7 @@ type ParsedMealItem = {
   quantity: number;
   unit: string;
   confidence?: number | null;
+  searchAliases?: string[];
 };
 
 type NutrientMatch = {
@@ -20,8 +21,20 @@ type NutrientMatch = {
   sugar: number;
   sodium: number;
   matched: boolean;
-  source: 'open_food_facts' | 'usda' | null;
+  source: 'open_food_facts' | 'usda' | 'ai_estimate' | null;
   matchedName?: string | null;
+};
+
+type AiNutritionEstimate = {
+  matched: boolean;
+  matchedName: string | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  sugar: number;
+  sodium: number;
 };
 
 type OpenFoodFactsProduct = {
@@ -143,6 +156,26 @@ const nameAliases: Record<string, string> = {
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
+const nutritionEstimateSchema = {
+  name: 'nutrition_estimate',
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['matched', 'matchedName', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'],
+    properties: {
+      matched: { type: 'boolean' },
+      matchedName: { type: ['string', 'null'] },
+      calories: { type: 'number' },
+      protein: { type: 'number' },
+      carbs: { type: 'number' },
+      fat: { type: 'number' },
+      fiber: { type: 'number' },
+      sugar: { type: 'number' },
+      sodium: { type: 'number' },
+    },
+  },
+};
+
 const emptyMatch = (): NutrientMatch => ({
   calories: 0,
   protein: 0,
@@ -155,6 +188,21 @@ const emptyMatch = (): NutrientMatch => ({
   source: null,
   matchedName: null,
 });
+
+const toSafeNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, value);
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(',', '.'));
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed);
+    }
+  }
+
+  return 0;
+};
 
 const readNumeric = (value: unknown) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -203,14 +251,17 @@ const normalizeName = (name: string) => {
   return partialAlias ?? normalized;
 };
 
-const getQueryCandidates = (name: string) => {
-  const normalized = normalizeName(name);
-  const withoutDescriptors = normalized
+const cleanQuery = (value: string) =>
+  value
     .replace(/\b(de|het|een|en|and|with|met|bio|organic|vers|verse|product|original)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  return [...new Set([normalized, withoutDescriptors].filter((query) => query.length >= 3))];
+const getQueryCandidates = (item: ParsedMealItem) => {
+  const normalized = normalizeName(item.name);
+  const aliasQueries = (item.searchAliases ?? []).map((alias) => normalizeName(alias));
+
+  return [...new Set([normalized, cleanQuery(normalized), ...aliasQueries.map(cleanQuery)].filter((query) => query.length >= 3))];
 };
 
 const normalizeUnit = (unit: string) => {
@@ -356,7 +407,7 @@ const buildMatch = (
     sugar: number;
     sodium: number;
   },
-  source: 'open_food_facts' | 'usda',
+  source: 'open_food_facts' | 'usda' | 'ai_estimate',
   matchedName?: string | null,
 ): NutrientMatch => ({
   calories: round(nutrients.calories),
@@ -380,6 +431,26 @@ const getNutrientsForSuffix = (nutriments: Record<string, number | string | unde
   sugar: readNumeric(nutriments[`sugars${suffix}`]) * multiplier,
   sodium: toMilligrams(readNumeric(nutriments[`sodium${suffix}`]) || readNumeric(nutriments[`salt${suffix}`]) / 2.5, 'g') * multiplier,
 });
+
+const buildAiEstimateMatch = (estimate: AiNutritionEstimate): NutrientMatch => {
+  if (!estimate.matched) {
+    return emptyMatch();
+  }
+
+  return buildMatch(
+    {
+      calories: toSafeNumber(estimate.calories),
+      protein: toSafeNumber(estimate.protein),
+      carbs: toSafeNumber(estimate.carbs),
+      fat: toSafeNumber(estimate.fat),
+      fiber: toSafeNumber(estimate.fiber),
+      sugar: toSafeNumber(estimate.sugar),
+      sodium: toSafeNumber(estimate.sodium),
+    },
+    'ai_estimate',
+    estimate.matchedName,
+  );
+};
 
 const parseServingInfo = (product: OpenFoodFactsProduct) => {
   const servingQuantity = readNumeric(product.serving_quantity);
@@ -478,7 +549,7 @@ const getOpenFoodFactsMatchForQuery = async (query: string, item: ParsedMealItem
 };
 
 const getOpenFoodFactsMatch = async (item: ParsedMealItem): Promise<NutrientMatch> => {
-  const queries = getQueryCandidates(item.name);
+  const queries = getQueryCandidates(item);
 
   for (const query of queries) {
     const match = await getOpenFoodFactsMatchForQuery(query, item);
@@ -604,7 +675,7 @@ const getUsdaMatchForQuery = async (query: string, item: ParsedMealItem, apiKey:
 };
 
 const getUsdaMatch = async (item: ParsedMealItem, apiKey: string | null): Promise<NutrientMatch> => {
-  const queries = getQueryCandidates(item.name);
+  const queries = getQueryCandidates(item);
 
   for (const query of queries) {
     const match = await getUsdaMatchForQuery(query, item, apiKey);
@@ -616,7 +687,73 @@ const getUsdaMatch = async (item: ParsedMealItem, apiKey: string | null): Promis
   return emptyMatch();
 };
 
-const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null) => {
+const getAiEstimate = async (item: ParsedMealItem, openAiKey: string | null, model: string): Promise<NutrientMatch> => {
+  if (!openAiKey) {
+    return emptyMatch();
+  }
+
+  const normalizedUnit = normalizeUnit(item.unit);
+  const queryCandidates = getQueryCandidates(item);
+  const upstreamResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${openAiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Estimate nutrition totals for one food or drink item in a nutrition tracking app. The user may write in Dutch or English. Return the total nutrients for the requested quantity and unit, not per 100g. Use practical generic nutrition references when the exact product is unknown. If the item is ambiguous, choose the most common edible interpretation and stay conservative. Sodium must be returned in milligrams. Never return negative values. If the item is not a recognizable edible product, set matched to false and set every nutrient to 0.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            itemName: item.name,
+            quantity: item.quantity,
+            unit: normalizedUnit,
+            searchAliases: item.searchAliases ?? [],
+            queryCandidates,
+          }),
+        },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: nutritionEstimateSchema.name,
+          strict: true,
+          schema: nutritionEstimateSchema.schema,
+        },
+      },
+    }),
+  });
+
+  const responseText = await upstreamResponse.text();
+
+  if (!upstreamResponse.ok) {
+    throw new Error(`OpenAI nutrition estimate failed with ${upstreamResponse.status}: ${responseText}`);
+  }
+
+  const parsed = JSON.parse(responseText) as {
+    choices?: Array<{
+      message?: {
+        content?: string;
+      };
+    }>;
+  };
+
+  const content = parsed.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenAI returned empty structured content for nutrition estimate.');
+  }
+
+  return buildAiEstimateMatch(JSON.parse(content) as AiNutritionEstimate);
+};
+
+const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null, openAiKey: string | null, aiNutritionModel: string) => {
   try {
     const openFoodFactsMatch = await getOpenFoodFactsMatch(item);
     if (openFoodFactsMatch.matched) {
@@ -633,6 +770,15 @@ const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null) => {
     }
   } catch (error) {
     console.warn('USDA lookup failed:', error);
+  }
+
+  try {
+    const aiEstimate = await getAiEstimate(item, openAiKey, aiNutritionModel);
+    if (aiEstimate.matched) {
+      return aiEstimate;
+    }
+  } catch (error) {
+    console.warn('AI nutrition estimate failed:', error);
   }
 
   return emptyMatch();
@@ -661,9 +807,11 @@ Deno.serve(async (request) => {
     }
 
     const usdaApiKey = Deno.env.get('USDA_API_KEY') ?? null;
+    const openAiKey = Deno.env.get('OPENAI_API_KEY') ?? null;
+    const aiNutritionModel = Deno.env.get('OPENAI_NUTRITION_MODEL') ?? Deno.env.get('OPENAI_MEAL_PARSER_MODEL') ?? 'gpt-4o-mini';
     const matchedItems = await Promise.all(
       items.map(async (item) => {
-        const match = await lookupItem(item, usdaApiKey);
+        const match = await lookupItem(item, usdaApiKey, openAiKey, aiNutritionModel);
         return {
           ...item,
           ...match,

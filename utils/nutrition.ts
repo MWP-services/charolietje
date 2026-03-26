@@ -225,7 +225,7 @@ export const scaleItemNutritionToQuantity = <T extends (AnalyzedMealItem | MealI
     fiber: round(asNumber(item.fiber) * ratio),
     sugar: round(asNumber(item.sugar) * ratio),
     sodium: round(asNumber(item.sodium) * ratio),
-    nutritionSource: item.nutritionSource === 'unresolved' ? 'unresolved' : 'manual',
+    nutritionSource: item.nutritionSource === 'unresolved' ? 'unresolved' : item.nutritionSource === 'estimated' ? 'estimated' : 'manual',
   } as Partial<T>;
 };
 

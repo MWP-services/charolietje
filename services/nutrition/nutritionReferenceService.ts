@@ -123,7 +123,7 @@ const normalizeUnit = (unit: string) => {
 };
 
 const toReferenceRecord = (userId: string, item: AnalyzedMealItem | MealItem): NutritionReferenceRecord | null => {
-  if (!item.name.trim() || !hasCompleteNutrition(item)) {
+  if (!item.name.trim() || !hasCompleteNutrition(item) || item.nutritionSource === 'estimated' || item.nutritionSource === 'unresolved') {
     return null;
   }
 

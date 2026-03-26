@@ -12,7 +12,7 @@ export const mealService = {
   async saveAnalyzedMeal(userId: string, transcriptionText: string, analysis: AnalyzedMeal) {
     const now = new Date().toISOString();
     const mealId = isSupabaseConfigured ? createUuid() : createId('meal');
-    const items = analysis.items.map((item) => ({
+    const items = analysis.items.map(({ searchAliases, ...item }) => ({
       ...item,
       id: isSupabaseConfigured ? createUuid() : createId('item'),
       meal_id: mealId,

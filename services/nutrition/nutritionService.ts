@@ -138,6 +138,8 @@ const normalizeUnit = (unit: string) => {
 };
 
 const normalizeName = nutritionReferenceService.normalizeName;
+const normalizeSearchAliases = (aliases?: string[]) =>
+  (aliases ?? []).map((alias) => normalizeName(alias)).filter((alias, index, all) => alias.length >= 3 && all.indexOf(alias) === index);
 
 const nameAliases: Record<string, string> = {
   brood: 'bread',
@@ -285,39 +287,44 @@ const toMilliliters = (quantity: number, unit: string) => {
   return null;
 };
 
-const resolveReference = (name: string, unit: string, learnedReferences?: Map<string, NutritionReference>) => {
-  const normalizedName = normalizeName(name);
-  const normalizedUnit = normalizeUnit(unit);
-
-  const learnedReference = learnedReferences?.get(normalizedName);
-  if (learnedReference) {
-    return { reference: learnedReference, normalizedUnit };
-  }
+const resolveReference = (item: ParsedMealItem, learnedReferences?: Map<string, NutritionReference>) => {
+  const normalizedName = normalizeName(item.name);
+  const normalizedAliases = normalizeSearchAliases(item.searchAliases);
+  const candidateNames = [normalizedName, ...normalizedAliases];
+  const normalizedUnit = normalizeUnit(item.unit);
 
   const learnedEntries = learnedReferences ? Object.fromEntries(learnedReferences.entries()) : null;
-  const partialLearnedKey = learnedEntries ? getPartialReferenceKey(normalizedName, learnedEntries) : null;
-  if (partialLearnedKey && learnedReferences?.get(partialLearnedKey)) {
-    return { reference: learnedReferences.get(partialLearnedKey)!, normalizedUnit };
-  }
 
-  const directReference = mockNutritionDatabase[normalizedName];
-  if (directReference) {
-    return { reference: directReference, normalizedUnit };
-  }
+  for (const candidateName of candidateNames) {
+    const learnedReference = learnedReferences?.get(candidateName);
+    if (learnedReference) {
+      return { reference: learnedReference, normalizedUnit };
+    }
 
-  const aliasReferenceKey = nameAliases[normalizedName];
-  if (aliasReferenceKey && mockNutritionDatabase[aliasReferenceKey]) {
-    return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
-  }
+    const partialLearnedKey = learnedEntries ? getPartialReferenceKey(candidateName, learnedEntries) : null;
+    if (partialLearnedKey && learnedReferences?.get(partialLearnedKey)) {
+      return { reference: learnedReferences.get(partialLearnedKey)!, normalizedUnit };
+    }
 
-  const partialAliasKey = Object.entries(nameAliases).find(([alias]) => normalizedName.includes(alias))?.[1];
-  if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
-    return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
-  }
+    const directReference = mockNutritionDatabase[candidateName];
+    if (directReference) {
+      return { reference: directReference, normalizedUnit };
+    }
 
-  const partialReferenceKey = getPartialReferenceKey(normalizedName, mockNutritionDatabase);
-  if (partialReferenceKey) {
-    return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
+    const aliasReferenceKey = nameAliases[candidateName];
+    if (aliasReferenceKey && mockNutritionDatabase[aliasReferenceKey]) {
+      return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
+    }
+
+    const partialAliasKey = Object.entries(nameAliases).find(([alias]) => candidateName.includes(alias))?.[1];
+    if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
+      return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
+    }
+
+    const partialReferenceKey = getPartialReferenceKey(candidateName, mockNutritionDatabase);
+    if (partialReferenceKey) {
+      return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
+    }
   }
 
   return { reference: null, normalizedUnit };
@@ -356,6 +363,8 @@ type RemoteNutritionLookupItem = AnalyzedMealItem & {
   source?: string | null;
 };
 
+const mapRemoteNutritionSource = (source?: string | null) => (source === 'ai_estimate' ? 'estimated' : 'matched');
+
 const createUnresolvedItem = (item: ParsedMealItem, normalizedUnit: string): AnalyzedMealItem => ({
   ...item,
   unit: normalizedUnit,
@@ -370,7 +379,7 @@ export const getNutritionForItemsMock = async (
   learnedReferences?: Map<string, NutritionReference>,
 ): Promise<AnalyzedMealItem[]> => {
   const enriched: AnalyzedMealItem[] = items.map((item) => {
-    const { reference, normalizedUnit } = resolveReference(item.name, item.unit, learnedReferences);
+    const { reference, normalizedUnit } = resolveReference(item, learnedReferences);
     if (!reference) {
       return createUnresolvedItem(item, normalizedUnit);
     }
@@ -442,7 +451,7 @@ const getNutritionFromRemoteProviders = async (
           fiber: round(item.fiber ?? 0),
           sugar: round(item.sugar ?? 0),
           sodium: round(item.sodium ?? 0),
-          nutritionSource: 'matched' as const,
+          nutritionSource: mapRemoteNutritionSource(item.source),
         }
       : mockFallback[index],
   );

@@ -1,6 +1,7 @@
 import type { Nutrients, OptionalNutrients } from '@/types/nutrition';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'unknown';
+export type MealNutritionSource = 'matched' | 'manual' | 'unresolved' | 'estimated';
 
 export type Meal = {
   id: string;
@@ -27,7 +28,7 @@ export type MealItem = {
   quantity: number;
   unit: string;
   confidence?: number | null;
-  nutritionSource?: 'matched' | 'manual' | 'unresolved';
+  nutritionSource?: MealNutritionSource;
 } & OptionalNutrients;
 
 export type MealWithItems = Meal & {
@@ -43,6 +44,7 @@ export type ParsedMealItem = {
   quantity: number;
   unit: string;
   confidence?: number | null;
+  searchAliases?: string[];
 };
 
 export type ParsedMeal = {
@@ -53,7 +55,7 @@ export type ParsedMeal = {
 
 export type AnalyzedMealItem = ParsedMealItem &
   OptionalNutrients & {
-    nutritionSource?: 'matched' | 'manual' | 'unresolved';
+    nutritionSource?: MealNutritionSource;
   };
 
 export type AnalyzedMeal = {

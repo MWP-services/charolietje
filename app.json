@@ -2,7 +2,7 @@
   "expo": {
     "name": "NutriVoice",
     "slug": "nutrivoice",
-    "version": "1.3.0",
+    "version": "1.5.0",
     "description": "NutriVoice is een voice-first voedingsapp waarmee gebruikers maaltijden kunnen loggen, voedingswaarden volgen en AI-gedreven coaching ontvangen.",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-welcome.png",

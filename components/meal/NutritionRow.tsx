@@ -22,8 +22,9 @@ export const NutritionRow = ({ item }: NutritionRowProps) => (
       <Text style={{ color: colors.text, fontSize: 14, fontFamily: 'Manrope_700Bold' }}>{formatCalories(item.calories)}</Text>
     </View>
     {hasCompleteNutrition(item) ? (
-      <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
+      <Text style={{ color: item.nutritionSource === 'estimated' ? colors.warning : colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
         {item.quantity} {formatUnit(item.unit)} - {Math.round(item.protein ?? 0)}g eiwit - {Math.round(item.carbs ?? 0)}g koolhydraten - {Math.round(item.fat ?? 0)}g vet
+        {item.nutritionSource === 'estimated' ? ' - AI-inschatting, even controleren' : ''}
       </Text>
     ) : (
       <Text style={{ color: colors.danger, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>

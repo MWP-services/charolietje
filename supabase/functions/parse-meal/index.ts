@@ -29,6 +29,10 @@ const mealSchema = {
             quantity: { type: 'number' },
             unit: { type: 'string' },
             confidence: { type: 'number' },
+            searchAliases: {
+              type: 'array',
+              items: { type: 'string' },
+            },
           },
         },
       },
@@ -82,7 +86,7 @@ Deno.serve(async (request) => {
           {
             role: 'system',
             content:
-              'Extract foods from meal descriptions for a nutrition app. The user may write in Dutch or English. Return canonical food names in English where practical, split combined meals into recognizable ingredients, and prefer generic product types over brand slogans. Estimate quantities conservatively, classify meal type, and never invent unrelated foods. Standardize units where possible: prefer gram for solids, ml for drinks, and piece, slice, or serving only when weight or volume is genuinely unknown. Convert cups, glasses, mugs, bowls, coffee servings, cans, bottles, and scoops into approximate ml or gram when you can. If a text contains packaged foods, return the edible product itself instead of packaging words.',
+              'Extract foods from meal descriptions for a nutrition app. The user may write in Dutch or English. Return canonical food names in English where practical, split combined meals into recognizable ingredients, and prefer generic product types over brand slogans. Estimate quantities conservatively, classify meal type, and never invent unrelated foods. Standardize units where possible: prefer gram for solids, ml for drinks, and piece, slice, or serving only when weight or volume is genuinely unknown. Convert cups, glasses, mugs, bowls, coffee servings, cans, bottles, and scoops into approximate ml or gram when you can. If a text contains packaged foods, return the edible product itself instead of packaging words. For each item, also return 2 to 5 short searchAliases that could help nutrition lookup, using likely Dutch and English variants, singular forms, and important preparation qualifiers such as grilled, cooked, whole wheat, low fat, or smoked when they materially change the nutrition match.',
           },
           {
             role: 'user',
