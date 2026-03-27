@@ -443,7 +443,7 @@ const getNutritionFromRemoteProviders = async (
     item.matched
       ? {
           ...items[index],
-          ...item,
+          unit: item.unit ? normalizeUnit(item.unit) : items[index].unit,
           calories: round(item.calories ?? 0),
           protein: round(item.protein ?? 0),
           carbs: round(item.carbs ?? 0),

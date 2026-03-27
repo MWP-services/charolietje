@@ -24,7 +24,7 @@ const mapSupabaseMeal = (meal: any): MealWithItems => ({
   items: (meal.meal_items ?? []) as MealItem[],
 });
 
-const toPersistedMealItem = ({ nutritionSource, searchAliases, ...item }: MealItem & { searchAliases?: string[] }) => item;
+const toPersistedMealItem = ({ nutritionSource, searchAliases, matched, matchedName, source, ...item }: MealItem & { searchAliases?: string[]; matched?: boolean; matchedName?: string | null; source?: string | null }) => item;
 
 const fetchSupabaseMeal = async (mealId: string) => {
   if (!supabase) {
