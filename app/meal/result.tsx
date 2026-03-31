@@ -10,6 +10,7 @@ import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
+import { ClarificationCard } from '@/components/meal/ClarificationCard';
 import { NutritionInputs } from '@/components/meal/NutritionInputs';
 import { NutritionRow } from '@/components/meal/NutritionRow';
 import { colors } from '@/constants/colors';
@@ -26,6 +27,9 @@ export default function MealAnalysisResultScreen() {
   const draftAnalysis = useMealStore((state) => state.draftAnalysis);
   const saveDraft = useMealStore((state) => state.saveDraft);
   const updateDraftItem = useMealStore((state) => state.updateDraftItem);
+  const answerDraftClarification = useMealStore((state) => state.answerDraftClarification);
+  const skipDraftClarification = useMealStore((state) => state.skipDraftClarification);
+  const isAnalyzing = useMealStore((state) => state.isAnalyzing);
   const isSaving = useMealStore((state) => state.isSaving);
   const error = useMealStore((state) => state.error);
   const clearError = useMealStore((state) => state.clearError);
@@ -36,6 +40,8 @@ export default function MealAnalysisResultScreen() {
   }
 
   const hasIncompleteItems = draftAnalysis.items.some((item) => !hasCompleteNutrition(item));
+  const pendingClarifications = draftAnalysis.clarifications.filter((question) => !question.answered && !question.skipped);
+  const activeClarification = pendingClarifications[0] ?? null;
 
   const toggleEditor = (index: number) => {
     setExpandedEditors((current) => (current.includes(index) ? current.filter((value) => value !== index) : [...current, index]));
@@ -68,6 +74,30 @@ export default function MealAnalysisResultScreen() {
     }
   };
 
+  const onAnswerClarification = async (selectedOptionIds: string[]) => {
+    if (!activeClarification) {
+      return;
+    }
+
+    try {
+      await answerDraftClarification(activeClarification.id, selectedOptionIds, session.userId);
+    } catch (clarificationError) {
+      Alert.alert('Bijwerken mislukt', clarificationError instanceof Error ? clarificationError.message : 'Probeer het opnieuw.');
+    }
+  };
+
+  const onSkipClarification = async () => {
+    if (!activeClarification) {
+      return;
+    }
+
+    try {
+      await skipDraftClarification(activeClarification.id, session.userId);
+    } catch (clarificationError) {
+      Alert.alert('Overslaan mislukt', clarificationError instanceof Error ? clarificationError.message : 'Probeer het opnieuw.');
+    }
+  };
+
   return (
     <ScreenContainer>
       <AppHeader showBackButton subtitle="Controleer de AI-inschatting voordat je deze aan je dag toevoegt." title="Maaltijdanalyse" />
@@ -90,10 +120,39 @@ export default function MealAnalysisResultScreen() {
       </FadeInView>
 
       <FadeInView delay={80}>
+        {activeClarification ? (
+          <ClarificationCard isLoading={isAnalyzing} onConfirm={onAnswerClarification} onSkip={onSkipClarification} question={activeClarification} />
+        ) : null}
+      </FadeInView>
+
+      {activeClarification ? (
+        <FadeInView delay={100}>
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>Slimmere inschatting actief</Text>
+            <Text style={{ color: colors.textSecondary, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
+              {pendingClarifications.length > 1
+                ? `Nog ${pendingClarifications.length} korte vragen over portie of bereiding. Je kunt ze ook overslaan en de standaardinschatting bewaren.`
+                : 'Nog 1 korte vraag over portie of bereiding. Je kunt deze ook overslaan en doorgaan met de standaardinschatting.'}
+            </Text>
+          </Card>
+        </FadeInView>
+      ) : null}
+
+      <FadeInView delay={120}>
         <Card>
           {draftAnalysis.items.map((item, index) => (
             <View key={`${item.name}-${item.quantity}-${index}`} style={{ gap: 12 }}>
               <NutritionRow item={item} />
+              {item.derivedFromClarification ? (
+                <InlineMessage
+                  description="Dit is een globale extra-inschatting uit je snelle check. We houden het bewust generiek als soort saus of extra toevoeging niet precies bekend is."
+                  title={`Extra uit snelle check voor ${item.parentItemName ?? 'je maaltijd'}`}
+                  tone="info"
+                />
+              ) : null}
+              {item.needsClarification && item.clarificationQuestion ? (
+                <Text style={{ color: colors.warning, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>{item.clarificationQuestion}</Text>
+              ) : null}
               {hasCompleteNutrition(item) ? (
                 <SecondaryButton
                   label={expandedEditors.includes(index) ? 'Klaar met aanpassen' : 'Portie, barcode of waardes aanpassen'}
@@ -176,9 +235,16 @@ export default function MealAnalysisResultScreen() {
         </Card>
       </FadeInView>
 
-      <FadeInView delay={140}>
+      <FadeInView delay={160}>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Maaltijdtotalen</Text>
+          {draftAnalysis.clarificationAnswers.length ? (
+            <InlineMessage
+              description="De totalen hieronder zijn al bijgewerkt met je gekozen porties, bereiding of extra's."
+              title="Verduidelijkingen verwerkt"
+              tone="info"
+            />
+          ) : null}
           {hasIncompleteItems ? (
             <InlineMessage
               description="De totalen hieronder tellen alleen de bekende waardes mee totdat je de ontbrekende velden hebt ingevuld."

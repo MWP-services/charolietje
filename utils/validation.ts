@@ -88,3 +88,73 @@ export const settingsSchema = z.object({
       message: 'Eiwitdoel moet tussen 30 en 350 liggen',
     }),
 });
+
+const clarificationTypeSchema = z.enum(['meal_size', 'portion_size', 'quantity', 'preparation_method', 'hidden_calories', 'source_context']);
+const mealPreparationMethodSchema = z.enum(['grilled', 'pan_fried', 'sauce', 'fried', 'oven_baked', 'boiled', 'raw']);
+const hiddenCalorieSchema = z.enum(['oil', 'butter', 'sauce', 'dressing', 'cheese', 'not_sure']);
+const mealSourceContextSchema = z.enum(['home_made', 'restaurant', 'takeaway']);
+const mealSizeSchema = z.enum(['small', 'normal', 'large']);
+
+export const clarificationOptionSchema = z.object({
+  id: z.string().optional(),
+  label: z.string(),
+  description: z.string().optional(),
+  grams: z.number().nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  unit: z.string().nullable().optional(),
+  prep: mealPreparationMethodSchema.nullable().optional(),
+  hiddenCalorie: hiddenCalorieSchema.nullable().optional(),
+  sourceContext: mealSourceContextSchema.nullable().optional(),
+  multiplier: z.number().nullable().optional(),
+  mealSizeKey: mealSizeSchema.nullable().optional(),
+});
+
+export const mealClarificationQuestionSchema = z.object({
+  id: z.string().optional(),
+  itemIndex: z.number().int().optional(),
+  itemName: z.string().optional(),
+  type: clarificationTypeSchema,
+  question: z.string(),
+  selectionMode: z.enum(['single', 'multiple']).optional(),
+  options: z.array(clarificationOptionSchema).default([]),
+  priority: z.number().optional(),
+  skippable: z.boolean().optional(),
+  rationale: z.string().optional(),
+  answered: z.boolean().optional(),
+  skipped: z.boolean().optional(),
+});
+
+export const parsedMealItemSchema = z.object({
+  name: z.string().min(1),
+  quantity: z.number(),
+  unit: z.string().min(1),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  confidenceFood: z.number().min(0).max(1).nullable().optional(),
+  confidenceAmount: z.number().min(0).max(1).nullable().optional(),
+  estimatedGrams: z.number().nullable().optional(),
+  searchAliases: z.array(z.string()).optional(),
+  needsClarification: z.boolean().optional(),
+  clarificationType: clarificationTypeSchema.nullable().optional(),
+  clarificationQuestion: z.string().nullable().optional(),
+  clarificationOptions: z.array(clarificationOptionSchema).default([]),
+  possiblePreparationMethods: z.array(mealPreparationMethodSchema).default([]),
+  possibleHiddenCalories: z.array(hiddenCalorieSchema).default([]),
+  selectedPreparationMethod: mealPreparationMethodSchema.nullable().optional(),
+  selectedHiddenCalories: z.array(hiddenCalorieSchema).default([]),
+  sourceContext: mealSourceContextSchema.nullable().optional(),
+  selectedMealSize: mealSizeSchema.nullable().optional(),
+  derivedFromClarification: z.boolean().optional(),
+  parentItemName: z.string().nullable().optional(),
+  templateKey: z.string().nullable().optional(),
+});
+
+export const parsedMealSchema = z.object({
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'unknown']),
+  originalText: z.string(),
+  overallConfidence: z.number().min(0).max(1).optional(),
+  needsClarification: z.boolean().optional(),
+  clarificationPriority: z.array(clarificationTypeSchema).default([]),
+  clarifications: z.array(mealClarificationQuestionSchema).default([]),
+  templateKey: z.string().nullable().optional(),
+  items: z.array(parsedMealItemSchema).min(1),
+});

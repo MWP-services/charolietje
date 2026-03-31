@@ -3,6 +3,7 @@ import type { AnalyzedMeal, MealWithItems } from '@/types/meal';
 import { createId, createUuid } from '@/utils/id';
 import { toMealTotalsRecord } from '@/utils/nutrition';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { mealCorrectionService } from '@/services/meals/mealCorrectionService';
 import { nutritionReferenceService } from '@/services/nutrition/nutritionReferenceService';
 
 export const mealService = {
@@ -32,6 +33,7 @@ export const mealService = {
     };
 
     const savedMeal = await mealRepository.saveMeal(meal);
+    await mealCorrectionService.recordCorrectionSignal(userId, savedMeal.id, analysis);
     await nutritionReferenceService.learnReferencesFromItems(userId, items);
     return savedMeal;
   },

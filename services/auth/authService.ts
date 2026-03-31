@@ -5,6 +5,7 @@ import { buildSeedProfile } from '@/constants/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { mealRepository } from '@/repositories/mealRepository';
 import { profileRepository } from '@/repositories/profileRepository';
+import { mealCorrectionRepository } from '@/repositories/mealCorrectionRepository';
 import { nutritionReferenceRepository } from '@/repositories/nutritionReferenceRepository';
 import type { AppSession, AuthRedirectResult, AuthSignUpResult } from '@/types/auth';
 
@@ -53,6 +54,7 @@ const clearLocalAccountData = async (userId: string) => {
   await Promise.all([
     profileRepository.clearLocalProfile(userId),
     mealRepository.clearLocalMeals(userId),
+    mealCorrectionRepository.clearLocalSignals(userId),
     nutritionReferenceRepository.clearLocalReferences(userId),
     persistMockSession(null),
   ]);

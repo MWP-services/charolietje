@@ -1,8 +1,9 @@
-import type { AnalyzedMeal, MealType, ParsedMeal, ParsedMealItem } from '@/types/meal';
+import type { AnalyzedMeal, ClarificationAnswer, MealType, ParsedMeal, ParsedMealItem } from '@/types/meal';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { calculateMealTotals } from '@/utils/nutrition';
 
 import { parseMealTextWithOpenAI } from '@/services/ai/mealParsingService';
+import { mealClarificationService } from '@/services/meals/mealClarificationService';
+import { mealCorrectionService } from '@/services/meals/mealCorrectionService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
 import { transcribeAudioWithOpenAI } from '@/services/ai/transcriptionService';
 
@@ -195,6 +196,24 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(pasta|spaghetti|penne|macaroni)/.test(normalized)) {
+    items.push({
+      name: 'pasta',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(pasta|spaghetti|penne|macaroni)/, 220),
+      unit: 'gram',
+      confidence: 0.8,
+    });
+  }
+
+  if (/(pesto)/.test(normalized)) {
+    items.push({
+      name: 'pesto',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|eetlepel|tbsp)\s*(pesto)/, 35),
+      unit: /(eetlepel|tbsp)/.test(normalized) ? 'tbsp' : 'gram',
+      confidence: 0.74,
+    });
+  }
+
   if (/(zilvervliesrijst|brown rice)/.test(normalized)) {
     items.push({
       name: 'brown rice',
@@ -266,6 +285,15 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
       quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(groenten|vegetables|groente)/, 150),
       unit: 'gram',
       confidence: 0.85,
+    });
+  }
+
+  if (/(salade|salad)/.test(normalized) && !/(fruit salad)/.test(normalized)) {
+    items.push({
+      name: 'vegetables',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(salade|salad)/, 250),
+      unit: 'gram',
+      confidence: 0.72,
     });
   }
 
@@ -557,6 +585,26 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
     });
   }
 
+  if (/(pokebowl|poke bowl|poké bowl)/.test(normalized)) {
+    items.push({
+      name: 'rice',
+      quantity: 180,
+      unit: 'gram',
+      confidence: 0.66,
+      searchAliases: ['poke bowl rice', 'pokebowl', 'poke bowl'],
+    });
+  }
+
+  if (/(nasi|bami)/.test(normalized)) {
+    items.push({
+      name: 'rice',
+      quantity: 250,
+      unit: 'gram',
+      confidence: 0.68,
+      searchAliases: ['nasi', 'bami'],
+    });
+  }
+
   if (/(kaas|cheese)/.test(normalized) && !/(huttenkaas|hüttenkäse|cottage cheese)/.test(normalized)) {
     items.push({
       name: 'cheese',
@@ -572,6 +620,24 @@ const parseKnownItems = (text: string): ParsedMealItem[] => {
       quantity: extractQuantity(normalized, /(\d+)\s*(gram|g|ml)\s*(pastasaus|tomatensaus|pasta sauce)/, 125),
       unit: /(ml)/.test(normalized) ? 'ml' : 'gram',
       confidence: 0.78,
+    });
+  }
+
+  if (/(dressing)/.test(normalized)) {
+    items.push({
+      name: 'dressing',
+      quantity: extractQuantity(normalized, /(\d+)\s*(ml|gram|g)\s*(dressing)/, 25),
+      unit: /(ml)/.test(normalized) ? 'ml' : 'gram',
+      confidence: 0.73,
+    });
+  }
+
+  if (/(boter|butter)/.test(normalized)) {
+    items.push({
+      name: 'butter',
+      quantity: extractQuantity(normalized, /(\d+)\s*(gram|g)\s*(boter|butter)/, 10),
+      unit: 'gram',
+      confidence: 0.74,
     });
   }
 
@@ -615,6 +681,11 @@ export const parseMealTextMock = async (text: string): Promise<ParsedMeal> => {
           mealType: detectMealType(text),
           items: fallbackItems,
           originalText: text,
+          overallConfidence: 0.62,
+          needsClarification: false,
+          clarificationPriority: [],
+          clarifications: [],
+          templateKey: null,
         }),
       900,
     );
@@ -630,21 +701,60 @@ export const aiService = {
 
     return transcribeAudioWithOpenAI(audioUri);
   },
-  async parseMealText(text: string) {
-    if (!isSupabaseConfigured) {
-      return parseMealTextMock(text);
-    }
+  async parseMealText(text: string, userId?: string | null) {
+    const promptHintText = await mealCorrectionService.getPromptHintText(userId, text);
+    const parsed = !isSupabaseConfigured ? await parseMealTextMock(text) : await parseMealTextWithOpenAI(text, promptHintText);
+    const initiallyEnriched = mealClarificationService.enrichParsedMeal(parsed, text);
+    const personalizationProfile = await mealCorrectionService.getPersonalizationProfile(
+      userId,
+      text,
+      initiallyEnriched.templateKey,
+      initiallyEnriched.items.map((item) => item.name),
+    );
 
-    return parseMealTextWithOpenAI(text);
+    return mealClarificationService.enrichParsedMeal(parsed, text, personalizationProfile);
+  },
+  async recalculateParsedMeal(
+    parsedMeal: ParsedMeal,
+    userId?: string | null,
+    initialParsedMeal?: ParsedMeal,
+    clarificationAnswers: ClarificationAnswer[] = [],
+  ): Promise<AnalyzedMeal> {
+    const items = await nutritionService.getNutritionForItems(parsedMeal.items, userId);
+    return mealClarificationService.toAnalyzedMeal(parsedMeal, items, initialParsedMeal ?? parsedMeal, clarificationAnswers);
   },
   async analyzeText(text: string, userId?: string | null): Promise<AnalyzedMeal> {
-    const parsed = await this.parseMealText(text);
-    const items = await nutritionService.getNutritionForItems(parsed.items, userId);
-    return {
-      mealType: parsed.mealType,
-      originalText: text,
-      items,
-      totals: calculateMealTotals(items),
-    };
+    const parsed = await this.parseMealText(text, userId);
+    return this.recalculateParsedMeal(parsed, userId, parsed, []);
+  },
+  async applyClarificationAnswer(
+    analysis: AnalyzedMeal,
+    questionId: string,
+    selectedOptionIds: string[],
+    userId?: string | null,
+  ): Promise<AnalyzedMeal> {
+    const parsedMeal = mealClarificationService.toParsedMealFromAnalysis(analysis);
+    const { parsedMeal: nextParsedMeal, answer } = mealClarificationService.applyClarificationAnswer(parsedMeal, questionId, selectedOptionIds);
+    const clarificationAnswers = [...analysis.clarificationAnswers.filter((entry) => entry.questionId !== questionId), answer];
+    return this.recalculateParsedMeal(nextParsedMeal, userId, analysis.initialParsedMeal, clarificationAnswers);
+  },
+  async skipClarificationQuestion(analysis: AnalyzedMeal, questionId: string, userId?: string | null): Promise<AnalyzedMeal> {
+    const parsedMeal = mealClarificationService.toParsedMealFromAnalysis(analysis);
+    const nextParsedMeal = mealClarificationService.skipClarification(parsedMeal, questionId);
+    const clarificationAnswers = [
+      ...analysis.clarificationAnswers.filter((entry) => entry.questionId !== questionId),
+      {
+        questionId,
+        itemIndex: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.itemIndex ?? 0,
+        itemName: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.itemName ?? '',
+        type: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.type ?? 'portion_size',
+        selectedOptionIds: [],
+        selectedLabels: [],
+        skipped: true,
+        answeredAt: new Date().toISOString(),
+      } satisfies ClarificationAnswer,
+    ];
+
+    return this.recalculateParsedMeal(nextParsedMeal, userId, analysis.initialParsedMeal, clarificationAnswers);
   },
 };

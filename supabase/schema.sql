@@ -69,6 +69,19 @@ create table if not exists public.nutrition_references (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.meal_correction_signals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  meal_id uuid references public.meals(id) on delete set null,
+  original_transcript text not null,
+  parsed_estimate jsonb not null default '{}'::jsonb,
+  clarification_answers jsonb not null default '[]'::jsonb,
+  final_items jsonb not null default '[]'::jsonb,
+  template_key text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create unique index if not exists nutrition_references_user_normalized_name_idx
   on public.nutrition_references(user_id, normalized_name);
 
@@ -76,6 +89,7 @@ alter table public.profiles enable row level security;
 alter table public.meals enable row level security;
 alter table public.meal_items enable row level security;
 alter table public.nutrition_references enable row level security;
+alter table public.meal_correction_signals enable row level security;
 
 create policy "profiles_select_own" on public.profiles
   for select using (auth.uid() = id);
@@ -144,4 +158,16 @@ create policy "nutrition_references_update_own" on public.nutrition_references
   for update using (auth.uid() = user_id);
 
 create policy "nutrition_references_delete_own" on public.nutrition_references
+  for delete using (auth.uid() = user_id);
+
+create policy "meal_correction_signals_select_own" on public.meal_correction_signals
+  for select using (auth.uid() = user_id);
+
+create policy "meal_correction_signals_insert_own" on public.meal_correction_signals
+  for insert with check (auth.uid() = user_id);
+
+create policy "meal_correction_signals_update_own" on public.meal_correction_signals
+  for update using (auth.uid() = user_id);
+
+create policy "meal_correction_signals_delete_own" on public.meal_correction_signals
   for delete using (auth.uid() = user_id);

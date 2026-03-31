@@ -25,6 +25,8 @@ type MealState = {
   consumePendingScannedItem: (targetKey: string) => AnalyzedMealItem | null;
   analyzeDraft: (userId?: string | null) => Promise<AnalyzedMeal>;
   updateDraftItem: (index: number, updates: Partial<AnalyzedMealItem>) => void;
+  answerDraftClarification: (questionId: string, selectedOptionIds: string[], userId?: string | null) => Promise<AnalyzedMeal>;
+  skipDraftClarification: (questionId: string, userId?: string | null) => Promise<AnalyzedMeal>;
   clearDraft: () => void;
   saveDraft: (userId: string) => Promise<MealWithItems>;
   deleteMeal: (userId: string, mealId: string) => Promise<void>;
@@ -107,6 +109,40 @@ export const useMealStore = create<MealState>((set, get) => ({
         },
       };
     });
+  },
+  async answerDraftClarification(questionId, selectedOptionIds, userId) {
+    const draftAnalysis = get().draftAnalysis;
+    if (!draftAnalysis) {
+      throw new Error('Er is geen actieve maaltijdanalyse om te verduidelijken.');
+    }
+
+    set({ isAnalyzing: true, error: null });
+    try {
+      const analysis = await aiService.applyClarificationAnswer(draftAnalysis, questionId, selectedOptionIds, userId);
+      set({ draftAnalysis: analysis, isAnalyzing: false });
+      return analysis;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Verduidelijking verwerken mislukt';
+      set({ isAnalyzing: false, error: message });
+      throw error;
+    }
+  },
+  async skipDraftClarification(questionId, userId) {
+    const draftAnalysis = get().draftAnalysis;
+    if (!draftAnalysis) {
+      throw new Error('Er is geen actieve maaltijdanalyse om te verduidelijken.');
+    }
+
+    set({ isAnalyzing: true, error: null });
+    try {
+      const analysis = await aiService.skipClarificationQuestion(draftAnalysis, questionId, userId);
+      set({ draftAnalysis: analysis, isAnalyzing: false });
+      return analysis;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Verduidelijking overslaan mislukt';
+      set({ isAnalyzing: false, error: message });
+      throw error;
+    }
   },
   clearDraft() {
     set({ draftText: '', draftAnalysis: null, pendingScannedItem: null, error: null, lastSavedMealId: null });

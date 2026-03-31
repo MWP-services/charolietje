@@ -164,12 +164,26 @@ export const formatFoodName = (name: string) => {
       return 'Crackers';
     case 'cheese':
       return 'Kaas';
+    case 'extra cheese':
+      return 'Extra kaas';
     case 'protein bar':
       return 'Eiwitreep';
     case 'pasta sauce':
       return 'Pastasaus';
+    case 'extra sauce':
+      return 'Extra saus';
+    case 'dressing':
+      return 'Dressing';
+    case 'extra dressing':
+      return 'Extra dressing';
     case 'olive oil':
       return 'Olijfolie';
+    case 'extra oil':
+      return 'Extra olie';
+    case 'butter':
+      return 'Boter';
+    case 'extra butter':
+      return 'Extra boter';
     case 'liverwurst':
       return 'Leverworst';
     case 'stroopwafel':

@@ -201,6 +201,7 @@ export const scaleItemNutritionToQuantity = <T extends (AnalyzedMealItem | MealI
     return {
       quantity: nextQuantity,
       unit: nextUnit,
+      estimatedGrams: nextUnit === 'gram' || nextUnit === 'ml' ? nextQuantity : item.estimatedGrams,
     } as Partial<T>;
   }
 
@@ -212,12 +213,14 @@ export const scaleItemNutritionToQuantity = <T extends (AnalyzedMealItem | MealI
     return {
       quantity: nextQuantity,
       unit: nextUnit,
+      estimatedGrams: nextUnit === 'gram' || nextUnit === 'ml' ? nextQuantity : item.estimatedGrams,
     } as Partial<T>;
   }
 
   return {
     quantity: nextQuantity,
     unit: nextUnit,
+    estimatedGrams: nextUnit === 'gram' || nextUnit === 'ml' ? nextQuantity : item.estimatedGrams,
     calories: round(asNumber(item.calories) * ratio),
     protein: round(asNumber(item.protein) * ratio),
     carbs: round(asNumber(item.carbs) * ratio),

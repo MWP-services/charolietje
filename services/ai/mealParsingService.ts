@@ -1,9 +1,10 @@
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { ParsedMeal } from '@/types/meal';
+import { parsedMealSchema } from '@/utils/validation';
 
 const getFunctionUrl = (path: string) => `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/${path}`;
 
-export const parseMealTextWithOpenAI = async (text: string): Promise<ParsedMeal> => {
+export const parseMealTextWithOpenAI = async (text: string, personalizationHints?: string | null): Promise<ParsedMeal> => {
   if (!isSupabaseConfigured) {
     throw new Error('Supabase is niet ingesteld, dus echte maaltijdparsing is niet beschikbaar.');
   }
@@ -14,7 +15,7 @@ export const parseMealTextWithOpenAI = async (text: string): Promise<ParsedMeal>
       'Content-Type': 'application/json',
       apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, personalizationHints }),
   });
 
   if (!response.ok) {
@@ -42,7 +43,14 @@ export const parseMealTextWithOpenAI = async (text: string): Promise<ParsedMeal>
     );
   }
 
-  const data = (await response.json()) as ParsedMeal;
+  const json = await response.json();
+  const parsedResult = parsedMealSchema.safeParse(json);
+
+  if (!parsedResult.success) {
+    throw new Error('De AI-parser gaf een ongeldig maaltijdschema terug.');
+  }
+
+  const data = parsedResult.data as ParsedMeal;
 
   if (!data.items?.length) {
     throw new Error('OpenAI maaltijdparsing gaf geen items terug.');
