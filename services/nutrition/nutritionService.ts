@@ -254,6 +254,8 @@ const nameAliases: Record<string, string> = {
   'extra cheese': 'cheese',
   pastasaus: 'pasta sauce',
   tomatensaus: 'pasta sauce',
+  lasagne: 'lasagna',
+  lasagna: 'lasagna',
   pesto: 'pesto',
   boter: 'butter',
   butter: 'butter',
@@ -283,6 +285,112 @@ const getPartialReferenceKey = (normalizedName: string, source: Record<string, N
   return candidates[0] ?? null;
 };
 
+const resolveCanonicalReference = (item: ParsedMealItem) => {
+  const normalizedName = normalizeName(item.name);
+  const normalizedAliases = normalizeSearchAliases(item.searchAliases);
+  const candidateNames = [normalizedName, ...normalizedAliases];
+  const normalizedUnit = normalizeUnit(item.unit);
+
+  for (const candidateName of candidateNames) {
+    const directReference = mockNutritionDatabase[candidateName];
+    if (directReference) {
+      return { reference: directReference, normalizedUnit };
+    }
+
+    const aliasReferenceKey = nameAliases[candidateName];
+    if (aliasReferenceKey && mockNutritionDatabase[aliasReferenceKey]) {
+      return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
+    }
+
+    const partialAliasKey = Object.entries(nameAliases).find(([alias]) => candidateName.includes(alias))?.[1];
+    if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
+      return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
+    }
+
+    const partialReferenceKey = getPartialReferenceKey(candidateName, mockNutritionDatabase);
+    if (partialReferenceKey) {
+      return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
+    }
+  }
+
+  return { reference: null, normalizedUnit };
+};
+
+const getReferenceDensityPerHundred = (reference: NutritionReference) => {
+  const normalizedReferenceUnit = normalizeUnit(reference.baseUnit);
+
+  if (normalizedReferenceUnit === 'gram' || normalizedReferenceUnit === 'ml') {
+    const scale = 100 / Math.max(reference.baseQuantity, 1);
+    return {
+      calories: reference.calories * scale,
+      protein: reference.protein * scale,
+      carbs: reference.carbs * scale,
+      fat: reference.fat * scale,
+      fiber: reference.fiber * scale,
+      sugar: reference.sugar * scale,
+      sodium: reference.sodium * scale,
+    };
+  }
+
+  return null;
+};
+
+const isReferencePlausibleForItem = (item: ParsedMealItem, reference: NutritionReference) => {
+  const { reference: canonicalReference } = resolveCanonicalReference(item);
+  if (!canonicalReference) {
+    return true;
+  }
+
+  const canonicalDensity = getReferenceDensityPerHundred(canonicalReference);
+  const candidateDensity = getReferenceDensityPerHundred(reference);
+
+  if (!canonicalDensity || !candidateDensity) {
+    return true;
+  }
+
+  if (candidateDensity.fat > Math.max(canonicalDensity.fat * 4, canonicalDensity.fat + 15)) {
+    return false;
+  }
+
+  if (candidateDensity.calories > Math.max(canonicalDensity.calories * 3.2, canonicalDensity.calories + 220)) {
+    return false;
+  }
+
+  return true;
+};
+
+const isNutritionPlausibleForQuantity = (
+  item: ParsedMealItem,
+  nutrients: Pick<AnalyzedMealItem, 'calories' | 'protein' | 'carbs' | 'fat'>,
+) => {
+  const normalizedUnit = normalizeUnit(item.unit);
+
+  if (normalizedUnit !== 'gram' && normalizedUnit !== 'ml') {
+    return true;
+  }
+
+  const quantityBasis = Math.max(item.quantity, 1);
+  const protein = Math.max(nutrients.protein ?? 0, 0);
+  const carbs = Math.max(nutrients.carbs ?? 0, 0);
+  const fat = Math.max(nutrients.fat ?? 0, 0);
+  const calories = Math.max(nutrients.calories ?? 0, 0);
+  const macroMass = protein + carbs + fat;
+
+  if (protein > quantityBasis * 1.05 || carbs > quantityBasis * 1.05 || fat > quantityBasis * 1.05) {
+    return false;
+  }
+
+  if (macroMass > quantityBasis * 1.12) {
+    return false;
+  }
+
+  if (calories > quantityBasis * 9.1) {
+    return false;
+  }
+
+  return true;
+};
+
 const toMilliliters = (quantity: number, unit: string) => {
   const normalizedUnit = normalizeUnit(unit);
   if (normalizedUnit === 'ml') {
@@ -306,37 +414,17 @@ const resolveReference = (item: ParsedMealItem, learnedReferences?: Map<string, 
 
   for (const candidateName of candidateNames) {
     const learnedReference = learnedReferences?.get(candidateName);
-    if (learnedReference) {
+    if (learnedReference && isReferencePlausibleForItem(item, learnedReference)) {
       return { reference: learnedReference, normalizedUnit };
     }
 
     const partialLearnedKey = learnedEntries ? getPartialReferenceKey(candidateName, learnedEntries) : null;
-    if (partialLearnedKey && learnedReferences?.get(partialLearnedKey)) {
+    if (partialLearnedKey && learnedReferences?.get(partialLearnedKey) && isReferencePlausibleForItem(item, learnedReferences.get(partialLearnedKey)!)) {
       return { reference: learnedReferences.get(partialLearnedKey)!, normalizedUnit };
-    }
-
-    const directReference = mockNutritionDatabase[candidateName];
-    if (directReference) {
-      return { reference: directReference, normalizedUnit };
-    }
-
-    const aliasReferenceKey = nameAliases[candidateName];
-    if (aliasReferenceKey && mockNutritionDatabase[aliasReferenceKey]) {
-      return { reference: mockNutritionDatabase[aliasReferenceKey], normalizedUnit };
-    }
-
-    const partialAliasKey = Object.entries(nameAliases).find(([alias]) => candidateName.includes(alias))?.[1];
-    if (partialAliasKey && mockNutritionDatabase[partialAliasKey]) {
-      return { reference: mockNutritionDatabase[partialAliasKey], normalizedUnit };
-    }
-
-    const partialReferenceKey = getPartialReferenceKey(candidateName, mockNutritionDatabase);
-    if (partialReferenceKey) {
-      return { reference: mockNutritionDatabase[partialReferenceKey], normalizedUnit };
     }
   }
 
-  return { reference: null, normalizedUnit };
+  return resolveCanonicalReference(item);
 };
 
 const getMultiplier = (item: ParsedMealItem, unit: string, reference: NutritionReference) => {
@@ -394,8 +482,7 @@ export const getNutritionForItemsMock = async (
     }
 
     const multiplier = getMultiplier(item, normalizedUnit, reference);
-
-    return {
+    const resolvedItem: AnalyzedMealItem = {
       ...item,
       unit: normalizedUnit,
       calories: round(reference.calories * multiplier),
@@ -407,6 +494,12 @@ export const getNutritionForItemsMock = async (
       sodium: round(reference.sodium * multiplier),
       nutritionSource: 'matched' as const,
     };
+
+    if (!isNutritionPlausibleForQuantity(item, resolvedItem)) {
+      return createUnresolvedItem(item, normalizedUnit);
+    }
+
+    return resolvedItem;
   });
 
   return withDelay(enriched, 520);
@@ -448,37 +541,58 @@ const getNutritionFromRemoteProviders = async (
 
   const mockFallback = await getNutritionForItemsMock(items, learnedReferences);
 
-  return data.items.map((item, index) =>
-    item.matched
-      ? {
-          ...items[index],
-          unit: item.unit ? normalizeUnit(item.unit) : items[index].unit,
-          calories: round(item.calories ?? 0),
-          protein: round(item.protein ?? 0),
-          carbs: round(item.carbs ?? 0),
-          fat: round(item.fat ?? 0),
-          fiber: round(item.fiber ?? 0),
-          sugar: round(item.sugar ?? 0),
-          sodium: round(item.sodium ?? 0),
-          nutritionSource: mapRemoteNutritionSource(item.source),
-        }
-      : mockFallback[index],
-  );
+  return data.items.map((item, index) => {
+    if (!item.matched) {
+      return mockFallback[index];
+    }
+
+    const resolvedItem: AnalyzedMealItem = {
+      ...items[index],
+      unit: item.unit ? normalizeUnit(item.unit) : items[index].unit,
+      calories: round(item.calories ?? 0),
+      protein: round(item.protein ?? 0),
+      carbs: round(item.carbs ?? 0),
+      fat: round(item.fat ?? 0),
+      fiber: round(item.fiber ?? 0),
+      sugar: round(item.sugar ?? 0),
+      sodium: round(item.sodium ?? 0),
+      nutritionSource: mapRemoteNutritionSource(item.source),
+    };
+
+    return isNutritionPlausibleForQuantity(items[index], resolvedItem) ? resolvedItem : mockFallback[index];
+  });
 };
 
 export const nutritionService = {
   async getNutritionForItems(items: ParsedMealItem[], userId?: string | null) {
     const learnedReferences = await nutritionReferenceService.getReferenceMap(userId);
+    const localMatches = await getNutritionForItemsMock(items, learnedReferences);
+    const unresolvedIndices = localMatches
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.nutritionSource === 'unresolved')
+      .map(({ index }) => index);
+
+    if (!unresolvedIndices.length) {
+      return localMatches;
+    }
 
     if (!isSupabaseConfigured) {
-      return getNutritionForItemsMock(items, learnedReferences);
+      return localMatches;
     }
 
     try {
-      return await getNutritionFromRemoteProviders(items, learnedReferences);
+      const unresolvedItems = unresolvedIndices.map((index) => items[index]);
+      const remoteMatches = await getNutritionFromRemoteProviders(unresolvedItems, learnedReferences);
+      const merged = [...localMatches];
+
+      unresolvedIndices.forEach((index, remoteIndex) => {
+        merged[index] = remoteMatches[remoteIndex];
+      });
+
+      return merged;
     } catch (error) {
       console.warn('Falling back to local nutrition matcher:', error);
-      return getNutritionForItemsMock(items, learnedReferences);
+      return localMatches;
     }
   },
 };

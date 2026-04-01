@@ -64,8 +64,8 @@ export default function RegisterScreen() {
       <AppHeader showBackButton subtitle="Maak je account aan en begin met tracken via je stem." title="Account aanmaken" />
       <AuthModeNotice compact />
       <InlineMessage
-        description="Na registratie bevestig je eerst je e-mailadres. Daarna sturen we je automatisch door naar onboarding."
-        title="Veilige accountactivatie"
+        description="Na registratie bevestig je eerst je e-mailadres. Daarna opent NutriVoice direct de volgende stap voor je."
+        title="Eerst nog een korte bevestiging"
       />
       <View style={{ gap: 18 }}>
         <Controller

@@ -75,11 +75,11 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader showBackButton subtitle="Welkom terug bij slimmer voeding tracken." title="Inloggen" />
+      <AppHeader showBackButton subtitle="Fijn dat je er weer bent. Je dagoverzicht staat zo weer klaar." title="Inloggen" />
       <AuthModeNotice compact />
       {params.verified === '1' ? (
         <InlineMessage
-          description="Je e-mailadres is bevestigd. Log nu in om door te gaan met onboarding of direct naar je dashboard te gaan."
+          description="Je e-mailadres is bevestigd. Log in en NutriVoice brengt je meteen naar de juiste volgende stap."
           title="Je account is geverifieerd"
           tone="success"
         />
@@ -126,7 +126,7 @@ export default function LoginScreen() {
       <PrimaryButton label="Inloggen" loading={isSubmitting} onPress={onSubmit} />
       <SecondaryButton label={isGuestLoading ? 'Gastmodus openen...' : 'Ga verder als gast'} onPress={onContinueAsGuest} disabled={isSubmitting || isGuestLoading} />
       <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
-        In gastmodus kun je de app gebruiken en maaltijden typen, maar spraaktranscriptie is uitgeschakeld.
+        In gastmodus kun je gewoon maaltijden typen en je dag bijhouden. Alleen spraaktranscriptie staat dan uit.
       </Text>
       <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', fontFamily: 'Manrope_500Medium' }}>
         <Link href="/(auth)/forgot-password" style={{ color: colors.secondary, fontFamily: 'Manrope_700Bold' }}>

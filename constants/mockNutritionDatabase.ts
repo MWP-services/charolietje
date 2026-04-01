@@ -661,6 +661,18 @@ export const mockNutritionDatabase: Record<string, NutritionReference> = {
     sugar: 0.6,
     sodium: 2,
   },
+  lasagna: {
+    name: 'Lasagna',
+    baseQuantity: 100,
+    baseUnit: 'gram',
+    calories: 163,
+    protein: 8.1,
+    carbs: 14.6,
+    fat: 8.1,
+    fiber: 1.1,
+    sugar: 2.8,
+    sodium: 340,
+  },
   pesto: {
     name: 'Pesto',
     baseQuantity: 30,

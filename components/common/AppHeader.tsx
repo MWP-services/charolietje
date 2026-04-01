@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 
 import { colors } from '@/constants/colors';
 
@@ -10,6 +10,7 @@ type AppHeaderProps = {
   actionLabel?: string;
   onActionPress?: () => void;
   showBackButton?: boolean;
+  backHref?: Href;
 };
 
 export const AppHeader = ({
@@ -18,6 +19,7 @@ export const AppHeader = ({
   actionLabel,
   onActionPress,
   showBackButton = false,
+  backHref = '/(tabs)',
 }: AppHeaderProps) => {
   const router = useRouter();
 
@@ -29,7 +31,14 @@ export const AppHeader = ({
             <Pressable
               accessibilityLabel="Ga terug"
               accessibilityRole="button"
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                  return;
+                }
+
+                router.replace(backHref);
+              }}
               style={{
                 width: 40,
                 height: 40,

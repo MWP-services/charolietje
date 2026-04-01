@@ -45,11 +45,11 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader showBackButton subtitle="We sturen je een beveiligde link om een nieuw wachtwoord te kiezen." title="Wachtwoord vergeten" />
+      <AppHeader showBackButton subtitle="Vul je e-mailadres in en we sturen je een veilige link om opnieuw in te stellen." title="Wachtwoord vergeten" />
 
       {hasSent ? (
         <InlineMessage
-          description={`We hebben een resetlink gestuurd naar ${submittedEmail}. Open de link op je iPhone en NutriVoice brengt je direct naar het scherm om een nieuw wachtwoord in te stellen.`}
+          description={`We hebben een resetlink gestuurd naar ${submittedEmail}. Open de link op je toestel en NutriVoice brengt je meteen naar het scherm om een nieuw wachtwoord te kiezen.`}
           title="Resetlink verstuurd"
           tone="success"
         />

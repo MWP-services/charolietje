@@ -139,15 +139,15 @@ export default function VoiceLogMealScreen() {
         showBackButton
         subtitle={
           isGuestMode
-            ? 'Gastmodus gebruikt alleen getypte invoer. Maak een account aan voor spraaktranscriptie.'
-            : 'Praat natuurlijk. Je kunt alles nog aanpassen voordat je opslaat.'
+            ? 'In gastmodus gebruik je alleen getypte invoer. Met een account kun je ook inspreken.'
+            : 'Vertel het zoals je het zelf zou zeggen. Je kunt alles straks nog nalopen.'
         }
         title="Maaltijd loggen"
       />
       {isGuestMode ? (
         <InlineMessage
           actionLabel={isTypedMode ? 'Terug naar overzicht' : 'Gebruik getypte invoer'}
-          description="Je kunt als gast nog steeds maaltijden analyseren, opslaan en je dagtotalen bekijken. Alleen transcriptie via audio is uitgeschakeld."
+          description="Je kunt als gast nog steeds maaltijden analyseren, opslaan en je dagtotalen bekijken. Alleen audio naar tekst staat uit."
           onActionPress={() => router.replace(isTypedMode ? '/(tabs)' : '/meal/log?mode=typed')}
           title="Spraaktranscriptie is niet beschikbaar in gastmodus"
         />
@@ -168,10 +168,10 @@ export default function VoiceLogMealScreen() {
             {recorderState.isRecording
               ? `${Math.max(1, Math.floor(recorderState.durationMillis / 1000))}s opgenomen`
               : isGuestMode
-                ? 'Getypte invoer werkt volledig in gastmodus. Maak een account aan als je ook audio wilt transcriberen.'
+                ? 'Getypte invoer werkt volledig in gastmodus. Maak een account aan als je ook wilt inspreken.'
               : isTypedMode
                 ? 'De snelle typmodus slaat opnemen over en brengt je direct naar bewerkbare maaltijdtekst.'
-                : 'Probeer: "Als ontbijt had ik 2 boterhammen met pindakaas en melk."'}
+                : 'Bijvoorbeeld: "Als ontbijt had ik twee boterhammen met pindakaas en een glas melk."'}
           </Text>
         </Card>
       </FadeInView>
@@ -196,8 +196,8 @@ export default function VoiceLogMealScreen() {
 
       <TranscriptionEditor onChangeText={setDraftText} value={draftText} />
 
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Handige voorbeelden</Text>
+        <Card style={{ gap: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Voorbeelden die goed werken</Text>
         {[
           'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
           'Voor lunch had ik een kipsandwich en een appel.',

@@ -230,3 +230,26 @@ export const formatUnit = (unit: string) => {
       return unit;
   }
 };
+
+const gramUnits = new Set(['g', 'gram', 'grams']);
+const milliliterUnits = new Set(['ml', 'milliliter', 'milliliters']);
+
+const formatNumericQuantity = (value: number) => {
+  const rounded = Math.round(value * 10) / 10;
+
+  if (Number.isInteger(rounded)) {
+    return String(rounded);
+  }
+
+  return rounded.toFixed(1).replace('.', ',');
+};
+
+export const formatQuantityWithUnit = (quantity: number, unit: string, estimatedGrams?: number | null) => {
+  const normalizedUnit = unit.trim().toLowerCase();
+
+  if (estimatedGrams && estimatedGrams > 0 && !gramUnits.has(normalizedUnit) && !milliliterUnits.has(normalizedUnit)) {
+    return formatGrams(estimatedGrams);
+  }
+
+  return `${formatNumericQuantity(quantity)} ${formatUnit(unit)}`;
+};

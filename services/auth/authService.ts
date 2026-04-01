@@ -145,6 +145,7 @@ export const authService = {
           email,
           is_premium: false,
           has_completed_onboarding: false,
+          has_received_demo: false,
         });
       }
 
@@ -167,6 +168,7 @@ export const authService = {
       email,
       is_premium: false,
       has_completed_onboarding: false,
+      has_received_demo: false,
     });
     return {
       session,
@@ -226,6 +228,7 @@ export const authService = {
       email: undefined,
       is_premium: false,
       has_completed_onboarding: true,
+      has_received_demo: false,
     });
 
     return session;

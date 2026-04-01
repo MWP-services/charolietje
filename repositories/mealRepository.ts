@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { buildSeedMeals } from '@/constants/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import type { MealItem, MealWithItems } from '@/types/meal';
+import type { Meal, MealItem, MealWithItems } from '@/types/meal';
 import { sortMealsByCreatedAt } from '@/utils/date';
 
 const mealsKey = (userId: string) => `nutrivoice:mock-meals:${userId}`;
@@ -14,15 +14,85 @@ const ensureMockMeals = async (userId: string) => {
     return JSON.parse(raw) as MealWithItems[];
   }
 
-  const seeded = buildSeedMeals(userId);
-  await AsyncStorage.setItem(mealsKey(userId), JSON.stringify(seeded));
-  return sortMealsByCreatedAt(seeded);
+  return [];
 };
 
-const mapSupabaseMeal = (meal: any): MealWithItems => ({
-  ...meal,
-  items: (meal.meal_items ?? []) as MealItem[],
-});
+const mapSupabaseMeal = (meal: any): MealWithItems => {
+  const { meal_items, ...mealRecord } = meal ?? {};
+
+  return {
+    ...mealRecord,
+    items: (meal_items ?? []) as MealItem[],
+  };
+};
+
+const toPersistedMealRecord = (meal: MealWithItems): Meal => {
+  const {
+    id,
+    user_id,
+    date,
+    meal_type,
+    original_text,
+    transcription_text,
+    total_calories,
+    total_protein,
+    total_carbs,
+    total_fat,
+    total_fiber,
+    total_sugar,
+    total_sodium,
+    created_at,
+    updated_at,
+  } = meal;
+
+  return {
+    id,
+    user_id,
+    date,
+    meal_type,
+    original_text,
+    transcription_text,
+    total_calories,
+    total_protein,
+    total_carbs,
+    total_fat,
+    total_fiber,
+    total_sugar,
+    total_sodium,
+    created_at,
+    updated_at,
+  };
+};
+
+const fetchMealItemsByMealIds = async (mealIds: string[]) => {
+  if (!supabase || !mealIds.length) {
+    return new Map<string, MealItem[]>();
+  }
+
+  const { data, error } = await supabase.from('meal_items').select('*').in('meal_id', mealIds);
+  if (error) {
+    throw error;
+  }
+
+  const itemsByMealId = new Map<string, MealItem[]>();
+  ((data ?? []) as MealItem[]).forEach((item) => {
+    const currentItems = itemsByMealId.get(item.meal_id) ?? [];
+    currentItems.push(item);
+    itemsByMealId.set(item.meal_id, currentItems);
+  });
+
+  return itemsByMealId;
+};
+
+const attachMealItems = async (meals: any[]) => {
+  const itemsByMealId = await fetchMealItemsByMealIds(meals.map((meal) => meal.id));
+  return meals.map((meal) =>
+    mapSupabaseMeal({
+      ...meal,
+      meal_items: itemsByMealId.get(meal.id) ?? [],
+    }),
+  );
+};
 
 const toPersistedMealItem = ({
   nutritionSource,
@@ -58,12 +128,17 @@ const fetchSupabaseMeal = async (mealId: string) => {
     return null;
   }
 
-  const { data, error } = await supabase.from('meals').select('*, meal_items(*)').eq('id', mealId).single();
+  const { data, error } = await supabase.from('meals').select('*').eq('id', mealId).single();
   if (error) {
     throw error;
   }
 
-  return data ? mapSupabaseMeal(data) : null;
+  if (!data) {
+    return null;
+  }
+
+  const [meal] = await attachMealItems([data]);
+  return meal ?? null;
 };
 
 export const mealRepository = {
@@ -71,7 +146,7 @@ export const mealRepository = {
     if (isSupabaseConfigured && supabase && !shouldUseMockMealStorage(userId)) {
       const { data, error } = await supabase
         .from('meals')
-        .select('*, meal_items(*)')
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -79,7 +154,7 @@ export const mealRepository = {
         throw error;
       }
 
-      return sortMealsByCreatedAt((data ?? []).map(mapSupabaseMeal));
+      return sortMealsByCreatedAt(await attachMealItems(data ?? []));
     }
 
     return sortMealsByCreatedAt(await ensureMockMeals(userId));
@@ -92,7 +167,8 @@ export const mealRepository = {
 
   async saveMeal(meal: MealWithItems) {
     if (isSupabaseConfigured && supabase && !shouldUseMockMealStorage(meal.user_id)) {
-      const { items, ...mealRecord } = meal;
+      const mealRecord = toPersistedMealRecord(meal);
+      const items = meal.items;
       const { error: mealError } = await supabase.from('meals').upsert(mealRecord);
       if (mealError) {
         throw new Error(mealError.message);
@@ -133,5 +209,20 @@ export const mealRepository = {
 
   async clearLocalMeals(userId: string) {
     await AsyncStorage.removeItem(mealsKey(userId));
+  },
+
+  async seedDemoMeals(userId: string) {
+    const demoMeals = buildSeedMeals(userId);
+
+    if (isSupabaseConfigured && supabase && !shouldUseMockMealStorage(userId)) {
+      for (const meal of demoMeals) {
+        await this.saveMeal(meal);
+      }
+
+      return sortMealsByCreatedAt(demoMeals);
+    }
+
+    await AsyncStorage.setItem(mealsKey(userId), JSON.stringify(sortMealsByCreatedAt(demoMeals)));
+    return demoMeals;
   },
 };

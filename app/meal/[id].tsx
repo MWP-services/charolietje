@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FadeInView } from '@/components/common/FadeInView';
+import { NutritionSummaryCard } from '@/components/common/NutritionSummaryCard';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
@@ -60,7 +61,7 @@ export default function MealDetailScreen() {
       <AppHeader showBackButton subtitle={formatDisplayDate(meal.date)} title={formatMealType(meal.meal_type)} />
       <FadeInView delay={20}>
         <Card style={{ gap: 12 }}>
-          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Originele transcriptie</Text>
+          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Wat je hebt gelogd</Text>
           <Text style={{ fontFamily: 'Manrope_500Medium', lineHeight: 24 }}>{meal.original_text}</Text>
         </Card>
       </FadeInView>
@@ -72,17 +73,29 @@ export default function MealDetailScreen() {
         </Card>
       </FadeInView>
       <FadeInView delay={100}>
-        <Card style={{ gap: 8 }}>
-          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Voedingsverdeling</Text>
-          <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(meal.total_calories)} kcal - {Math.round(meal.total_protein)}g eiwit - {Math.round(meal.total_carbs)}g koolhydraten - {Math.round(meal.total_fat)}g vet
-          </Text>
-          <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            Vezels {Math.round(meal.total_fiber)}g - Suiker {Math.round(meal.total_sugar)}g - Natrium {Math.round(meal.total_sodium)}mg
-          </Text>
-        </Card>
+        <NutritionSummaryCard
+          subtitle="Zo telt deze maaltijd mee in je dagtotaal."
+          title="Voedingssamenvatting"
+          totals={{
+            calories: meal.total_calories,
+            protein: meal.total_protein,
+            carbs: meal.total_carbs,
+            fat: meal.total_fat,
+            fiber: meal.total_fiber,
+            sugar: meal.total_sugar,
+            sodium: meal.total_sodium,
+          }}
+        />
       </FadeInView>
-      <PrimaryButton label="Maaltijd bewerken" onPress={() => router.push(`/meal/edit/${meal.id}`)} />
+      <PrimaryButton
+        label="Maaltijd bewerken"
+        onPress={() =>
+          router.push({
+            pathname: '/meal/edit/[id]',
+            params: { id: meal.id },
+          })
+        }
+      />
       <SecondaryButton label="Maaltijd verwijderen" onPress={onDelete} />
     </ScreenContainer>
   );

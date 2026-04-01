@@ -14,7 +14,6 @@ import type {
   ParsedMeal,
   ParsedMealItem,
 } from '@/types/meal';
-import { createId } from '@/utils/id';
 import { calculateMealTotals } from '@/utils/nutrition';
 
 const normalize = (value: string) =>
@@ -89,6 +88,9 @@ const normalizeUnit = (unit: string) => {
 
 const unique = <T,>(values: T[]) => values.filter((value, index) => values.indexOf(value) === index);
 const round = (value: number) => Math.round(value * 10) / 10;
+
+const buildClarificationId = (itemIndex: number, type: ClarificationType, itemName?: string) =>
+  `${type}:${itemIndex}:${normalize(itemName ?? 'meal')}`;
 
 const getEstimatedGrams = (quantity: number, unit: string) => {
   const normalizedUnit = normalizeUnit(unit);
@@ -421,7 +423,7 @@ const createQuestion = (
   };
 
   return {
-    id: createId(`clarify-${itemIndex}-${type}`),
+    id: buildClarificationId(itemIndex, type, item.name),
     itemIndex,
     itemName: item.name,
     type,
@@ -437,7 +439,7 @@ const createMealSizeQuestion = (items: ParsedMealItem[], transcript: string, tem
   const question = plateLikePattern.test(transcript) ? 'Hoe groot was het bord ongeveer?' : 'Hoe groot was de hele maaltijd ongeveer?';
 
   return {
-    id: createId('clarify-meal-size'),
+    id: buildClarificationId(-1, 'meal_size', template?.key ?? 'hele maaltijd'),
     itemIndex: -1,
     itemName: 'hele maaltijd',
     type: 'meal_size' as const,

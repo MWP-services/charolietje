@@ -9,15 +9,17 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { AuthModeNotice } from '@/components/common/AuthModeNotice';
 import { Card } from '@/components/common/Card';
 import { FormField } from '@/components/common/FormField';
+import { InlineMessage } from '@/components/common/InlineMessage';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { GoalSelector } from '@/components/settings/GoalSelector';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
+import { notificationService } from '@/services/notifications/notificationService';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
-import type { GoalType } from '@/types/profile';
+import type { GoalType, UserProfile } from '@/types/profile';
 import { settingsSchema } from '@/utils/validation';
 import { colors } from '@/constants/colors';
 
@@ -35,6 +37,7 @@ export default function ProfileSettingsScreen() {
   const clearMeals = useMealStore((state) => state.clearMeals);
   const { isRefreshing, refresh } = useAppDataRefresh();
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
   const {
     control,
     handleSubmit,
@@ -108,9 +111,53 @@ export default function ProfileSettingsScreen() {
     ]);
   };
 
+  const updateNotificationSettings = async (updates: Partial<UserProfile>) => {
+    if (!profile) {
+      return;
+    }
+
+    try {
+      setIsUpdatingNotifications(true);
+      await updateProfile(updates);
+    } catch (error) {
+      Alert.alert('Meldingen bijwerken mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
+    } finally {
+      setIsUpdatingNotifications(false);
+    }
+  };
+
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    if (!profile) {
+      return;
+    }
+
+    if (!enabled) {
+      await updateNotificationSettings({ notifications_enabled: false });
+      return;
+    }
+
+    try {
+      setIsUpdatingNotifications(true);
+      const permissionStatus = await notificationService.requestPermissions();
+      const canEnable = permissionStatus === 'granted';
+      await updateProfile({
+        notifications_enabled: canEnable,
+        notification_permission_status: permissionStatus,
+      });
+
+      if (!canEnable) {
+        Alert.alert('Meldingen staan nog uit', 'Geef eerst notificatierechten in je toestelinstellingen om slimme herinneringen te ontvangen.');
+      }
+    } catch (error) {
+      Alert.alert('Meldingen activeren mislukt', error instanceof Error ? error.message : 'Probeer het opnieuw.');
+    } finally {
+      setIsUpdatingNotifications(false);
+    }
+  };
+
   return (
     <ScreenContainer loading={isLoading && !profile} loadingLabel="Je instellingen worden geladen..." onRefresh={refresh} refreshing={isRefreshing}>
-      <AppHeader subtitle="Profiel, doelen, premiummodus en accountacties." title="Instellingen" />
+      <AppHeader subtitle="Beheer je profiel, doelen, meldingen en accountinstellingen." title="Instellingen" />
       <AuthModeNotice compact />
       <Card style={{ gap: 16 }}>
         <Controller
@@ -145,7 +192,45 @@ export default function ProfileSettingsScreen() {
 
       <Card>
         <SettingsRow
-          description="Premium Launch staat tijdelijk gratis open. Activeren of beheren doe je via het premium scherm."
+          description="Krijg alleen meldingen die echt helpen, zoals een gemiste maaltijdwindow of een rustige voortgangsnudge."
+          disabled={isUpdatingNotifications}
+          onSwitchChange={(value) => void handleNotificationsToggle(value)}
+          switchValue={Boolean(profile?.notifications_enabled)}
+          title="Slimme meldingen"
+        />
+        <SettingsRow
+          description="Een vriendelijke reminder als een gebruikelijk eetmoment voorbijgaat zonder log."
+          disabled={!profile?.notifications_enabled || isUpdatingNotifications}
+          onSwitchChange={(value) => void updateNotificationSettings({ meal_reminders_enabled: value })}
+          switchValue={Boolean(profile?.meal_reminders_enabled)}
+          title="Maaltijdherinneringen"
+        />
+        <SettingsRow
+          description="Een zetje als je ritme lekker loopt en je streak bijna weer rond is."
+          disabled={!profile?.notifications_enabled || isUpdatingNotifications}
+          onSwitchChange={(value) => void updateNotificationSettings({ consistency_reminders_enabled: value })}
+          switchValue={Boolean(profile?.consistency_reminders_enabled)}
+          title="Consistentie en streaks"
+        />
+        <SettingsRow
+          description="Kleine voortgangsupdates als je eiwitten of dagdoel er goed uitzien."
+          disabled={!profile?.notifications_enabled || isUpdatingNotifications}
+          onSwitchChange={(value) => void updateNotificationSettings({ progress_nudges_enabled: value })}
+          switchValue={Boolean(profile?.progress_nudges_enabled)}
+          title="Voortgangsnudges"
+        />
+      </Card>
+      {profile?.notification_permission_status === 'denied' ? (
+        <InlineMessage
+          description="Geef NutriVoice toegang tot meldingen in je toestelinstellingen als je deze slimme reminders wilt ontvangen."
+          title="Meldingen staan op je toestel nog uit"
+          tone="info"
+        />
+      ) : null}
+
+      <Card>
+        <SettingsRow
+          description="Activeer of beheer je premiumtoegang via het premium scherm."
           rightText={profile?.is_premium ? 'Actief' : 'Niet actief'}
           title="Premium plan"
         />
@@ -157,7 +242,7 @@ export default function ProfileSettingsScreen() {
         <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium', fontSize: 14, lineHeight: 22 }}>
           {session?.provider === 'guest'
             ? 'Verwijder alle lokale gastgegevens van dit apparaat als je opnieuw wilt beginnen.'
-            : 'Verwijder je account en alle gekoppelde voedingsdata permanent uit NutriVoice.'}
+            : 'Verwijder je account en alle gekoppelde voedingsdata definitief uit NutriVoice.'}
         </Text>
         <PrimaryButton
           accessibilityLabel={session?.provider === 'guest' ? 'Gastgegevens verwijderen' : 'Account verwijderen'}

@@ -5,11 +5,13 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { Card } from '@/components/common/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FadeInView } from '@/components/common/FadeInView';
+import { NutritionSummaryCard } from '@/components/common/NutritionSummaryCard';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealCard } from '@/components/dashboard/MealCard';
+import { colors } from '@/constants/colors';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useMeals } from '@/hooks/useMeals';
 import { useAuthStore } from '@/store/authStore';
@@ -46,16 +48,11 @@ export default function DayDetailScreen() {
     <ScreenContainer loading={isMealsLoading && !meals.length} loadingLabel="Dagdetails worden geladen..." onRefresh={refresh} refreshing={isRefreshing}>
       <AppHeader showBackButton subtitle="Dagtotalen en details van je maaltijden" title={formatLongDate(date)} />
       <FadeInView delay={20}>
-        <Card style={{ gap: 12 }}>
-          <Text style={{ fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Totale voedingswaarden van de dag</Text>
-          <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(totals.calories)} kcal - {Math.round(totals.protein)}g eiwit - {Math.round(totals.carbs)}g koolhydraten - {Math.round(totals.fat)}g vet
+        <NutritionSummaryCard subtitle="Je belangrijkste cijfers van deze dag in een oogopslag." title="Dagoverzicht" totals={totals}>
+          <Text style={{ fontFamily: 'Manrope_600SemiBold', color: colors.textSecondary }}>
+            Doelvoortgang: {calorieProgress}% calorieen • {proteinProgress}% eiwit
           </Text>
-          <Text style={{ fontFamily: 'Manrope_500Medium' }}>
-            Vezels {Math.round(totals.fiber)}g - Suiker {Math.round(totals.sugar)}g - Natrium {Math.round(totals.sodium)}mg
-          </Text>
-          <Text style={{ fontFamily: 'Manrope_600SemiBold' }}>Doelvoortgang: {calorieProgress}% calorieen - {proteinProgress}% eiwit</Text>
-        </Card>
+        </NutritionSummaryCard>
       </FadeInView>
 
       <SectionHeader subtitle="Tik op een maaltijd voor details of om te bewerken." title="Maaltijden" />
@@ -66,7 +63,13 @@ export default function DayDetailScreen() {
               <View style={{ gap: 10 }}>
                 <MealCard meal={meal} onPress={() => router.push(`/meal/${meal.id}`)} />
                 <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 6 }}>
-                  <Pressable onPress={() => router.push(`/meal/edit/${meal.id}`)}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/meal/edit/[id]',
+                        params: { id: meal.id },
+                      })
+                    }>
                     <Text style={{ fontFamily: 'Manrope_700Bold' }}>Maaltijd bewerken</Text>
                   </Pressable>
                   <Pressable

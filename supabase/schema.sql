@@ -12,9 +12,22 @@ create table if not exists public.profiles (
   weight_kg numeric,
   height_cm numeric,
   has_completed_onboarding boolean not null default false,
+  has_received_demo boolean not null default true,
+  notifications_enabled boolean not null default false,
+  meal_reminders_enabled boolean not null default true,
+  consistency_reminders_enabled boolean not null default true,
+  progress_nudges_enabled boolean not null default true,
+  notification_permission_status text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.profiles add column if not exists has_received_demo boolean not null default true;
+alter table public.profiles add column if not exists notifications_enabled boolean not null default false;
+alter table public.profiles add column if not exists meal_reminders_enabled boolean not null default true;
+alter table public.profiles add column if not exists consistency_reminders_enabled boolean not null default true;
+alter table public.profiles add column if not exists progress_nudges_enabled boolean not null default true;
+alter table public.profiles add column if not exists notification_permission_status text;
 
 create table if not exists public.meals (
   id uuid primary key default gen_random_uuid(),

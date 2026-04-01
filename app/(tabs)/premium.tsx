@@ -74,12 +74,12 @@ export default function PremiumAdviceScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Tag label="Premium vergrendeld" tone="warning" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              Activeer het launch-plan om coaching te ontgrendelen
+              Activeer premium om je persoonlijke coaching te openen
             </Text>
           </View>
           <PremiumUpsellCard onPress={() => router.push('/premium/activate')} />
           <Card style={{ gap: 14 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Wat dit plan vrijspeelt</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Wat je erbij krijgt</Text>
             {premiumLaunchPlan.features.map((item) => (
               <View key={item} style={{ flexDirection: 'row', gap: 10 }}>
                 <Ionicons color={colors.secondary} name="sparkles-outline" size={18} />
@@ -96,7 +96,7 @@ export default function PremiumAdviceScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Tag label="Premium actief" tone="primary" />
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_600SemiBold' }}>
-              {premiumLaunchPlan.priceLabel} launch-plan actief
+              {premiumLaunchPlan.priceLabel} actief
             </Text>
           </View>
 
@@ -105,7 +105,7 @@ export default function PremiumAdviceScreen() {
               <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold' }}>COACH SCORE</Text>
               <Text style={{ color: colors.text, fontSize: 30, fontFamily: 'Manrope_800ExtraBold' }}>{advice?.coach_score ?? '--'}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, fontFamily: 'Manrope_600SemiBold' }}>
-                {advice?.score_label ?? 'We beoordelen je dag'}
+                {advice?.score_label ?? 'We lezen je dag nog in'}
               </Text>
             </Card>
             <Card style={{ flex: 1, gap: 8 }}>
@@ -121,14 +121,6 @@ export default function PremiumAdviceScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
               {advice?.summary ?? 'Je premium aanbevelingen worden gegenereerd...'}
             </Text>
-          </Card>
-
-          <Card style={{ gap: 12 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontFamily: 'Manrope_700Bold' }}>Snelle productscan</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_500Medium' }}>
-              Scan een streepjescode van een verpakking en stuur het product direct door naar de maaltijdanalyse, waar je de gekozen voedingswaardes nog kunt aanpassen.
-            </Text>
-            <PrimaryButton label="Barcode scannen" onPress={() => router.push('/meal/barcode-scan')} />
           </Card>
 
           <Card style={{ gap: 8 }}>
@@ -166,7 +158,7 @@ export default function PremiumAdviceScreen() {
             </Card>
           ))}
 
-          <SectionHeader title="Verbeterideeen" />
+          <SectionHeader title="Volgende stappen" />
           {advice?.improvements.map((tip) => (
             <Card key={tip} style={{ padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 24, fontFamily: 'Manrope_600SemiBold' }}>{tip}</Text>

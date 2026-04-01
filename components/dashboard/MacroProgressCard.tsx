@@ -30,6 +30,10 @@ export const MacroProgressCard = ({
           {target ? ` / ${target}${unit}` : ''}
         </Text>
       </View>
+      <Text style={{ color: colors.text, fontSize: 28, fontFamily: 'Manrope_800ExtraBold' }}>
+        {Math.round(current)}
+        <Text style={{ color: colors.textSecondary, fontSize: 16 }}> {unit.trim()}</Text>
+      </Text>
       <View style={{ height: 10, backgroundColor: colors.backgroundAlt, borderRadius: 999, overflow: 'hidden' }}>
         <View style={{ width: `${percentage}%`, height: '100%', borderRadius: 999, backgroundColor: color }} />
       </View>

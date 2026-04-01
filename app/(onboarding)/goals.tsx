@@ -56,7 +56,7 @@ export default function OnboardingGoalsScreen() {
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader subtitle="Laat NutriVoice weten wat voor jou succes betekent." title="Stel je doel in" />
+      <AppHeader subtitle="Vertel kort waar je naartoe werkt. Dan maken we je inzichten meteen relevanter." title="Stel je doel in" />
       <View style={{ gap: 16 }}>
         <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>Hoofddoel</Text>
         <Controller
@@ -110,7 +110,7 @@ export default function OnboardingGoalsScreen() {
       </Card>
 
       <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-        Huidig doel:{' '}
+        Je huidige focus:{' '}
         <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold' }}>
           {watch('goal') === 'lose_weight'
             ? 'afvallen'
@@ -120,7 +120,7 @@ export default function OnboardingGoalsScreen() {
         </Text>
       </Text>
 
-      <PrimaryButton label="Verder naar overzicht" loading={isSubmitting} onPress={onSubmit} />
+      <PrimaryButton label="Verder naar je overzicht" loading={isSubmitting} onPress={onSubmit} />
     </ScreenContainer>
   );
 }

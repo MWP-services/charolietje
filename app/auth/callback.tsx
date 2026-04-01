@@ -23,8 +23,8 @@ export default function AuthCallbackScreen() {
   const setPasswordRecoveryFlow = useAuthStore((state) => state.setPasswordRecoveryFlow);
   const [callbackState, setCallbackState] = useState<CallbackState>({
     status: 'loading',
-    title: 'Beveiligde link wordt verwerkt',
-    description: 'We controleren je authenticatielink en sturen je zo door naar de juiste volgende stap.',
+    title: 'Je beveiligde link wordt gecontroleerd',
+    description: 'We verwerken je link en brengen je daarna automatisch naar de juiste plek in de app.',
   });
   const hasHandled = useRef(false);
 
@@ -53,7 +53,7 @@ export default function AuthCallbackScreen() {
           setCallbackState({
             status: 'success',
             title: 'Je account is bevestigd',
-            description: 'NutriVoice opent nu je account zodat je verder kunt met onboarding of direct naar je dashboard gaat.',
+            description: 'NutriVoice opent nu je account zodat je meteen verder kunt.',
           });
           router.replace(result.session ? '/(tabs)' : '/(auth)/login?verified=1');
           return;
@@ -74,7 +74,7 @@ export default function AuthCallbackScreen() {
 
   return (
     <ScreenContainer contentStyle={{ gap: 24 }}>
-      <AppHeader subtitle="Deze pagina verwerkt verificatie- en herstelkoppelingen uit je e-mail." title="Authenticatie verwerken" />
+      <AppHeader subtitle="Hier verwerken we verificatie- en herstellinks uit je e-mail." title="Beveiligde link verwerken" />
 
       {callbackState.status === 'loading' ? (
         <View style={{ gap: 16 }}>

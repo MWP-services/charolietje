@@ -29,9 +29,11 @@ export const StreakCard = ({ days }: StreakCardProps) => (
       <Ionicons color={colors.primary} name="flame" size={24} />
     </View>
     <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>{days}-daagse logreeks</Text>
+      <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Manrope_700Bold' }}>
+        {days > 0 ? `${days}-daagse logreeks` : 'Je logreeks begint vandaag'}
+      </Text>
       <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
-        Kleine consistente acties stapelen zich op.
+        Kleine consistente acties bouwen sneller op dan je denkt.
       </Text>
     </View>
   </Card>

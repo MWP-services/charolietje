@@ -42,20 +42,20 @@ export default function VerifyEmailScreen() {
     <ScreenContainer contentStyle={{ gap: 24 }}>
       <AppHeader
         showBackButton
-        subtitle="Bevestig eerst je e-mailadres om je account veilig te activeren en daarna verder te gaan met onboarding."
+        subtitle="Open de link in je inbox om je account veilig te activeren en direct verder te gaan."
         title="Controleer je e-mail"
       />
       <AuthModeNotice />
 
       <InlineMessage
-        description={email ? `We hebben een verificatielink gestuurd naar ${email}. Open die link op je iPhone om je account direct te activeren.` : 'We hebben een verificatielink gestuurd naar je inbox.'}
-        title="Je account wacht op verificatie"
+        description={email ? `We hebben een verificatielink gestuurd naar ${email}. Zodra je die opent, activeert NutriVoice je account automatisch.` : 'We hebben een verificatielink naar je inbox gestuurd.'}
+        title="Bijna klaar"
         tone="info"
       />
 
       <View style={{ gap: 14 }}>
         <Text style={{ color: colors.text, fontSize: 16, lineHeight: 26, fontFamily: 'Manrope_500Medium' }}>
-          Zodra je op de link in de e-mail klikt, opent NutriVoice automatisch en zetten we je door naar de volgende stap.
+          Zodra je op de link in de e-mail klikt, opent NutriVoice automatisch en zetten we je door naar de juiste volgende stap.
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: 'Manrope_500Medium' }}>
           Zie je niets binnen een paar minuten? Controleer ook je spammap of stuur de e-mail opnieuw.

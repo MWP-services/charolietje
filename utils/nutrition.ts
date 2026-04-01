@@ -1,5 +1,7 @@
-import type { AnalyzedMealItem, DailyTotals, MealItem, MealWithItems } from '@/types/meal';
+import type { DailyTotals, MealItem, MealWithItems, WeeklyOverview, WeeklyOverviewDay, AnalyzedMealItem } from '@/types/meal';
 import type { NutrientKey, Nutrients, OptionalNutrients } from '@/types/nutrition';
+import type { GoalType } from '@/types/profile';
+import { getWeekDates, toIsoDate } from '@/utils/date';
 
 const round = (value: number) => Math.round(value * 10) / 10;
 export const nutrientKeys: NutrientKey[] = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'];
@@ -267,6 +269,206 @@ export const calculateProgress = (current: number, target: number | null) => {
   }
 
   return Math.min(100, Math.round((current / target) * 100));
+};
+
+export const getStreakFromDates = (dates: string[], referenceDate = new Date()) => {
+  let streak = 0;
+  const uniqueDates = new Set(dates);
+
+  while (true) {
+    const current = new Date(referenceDate);
+    current.setDate(referenceDate.getDate() - streak);
+    const iso = toIsoDate(current);
+    if (!uniqueDates.has(iso)) {
+      break;
+    }
+    streak += 1;
+  }
+
+  return streak;
+};
+
+const averageNutrients = (totals: Nutrients, divisor: number): Nutrients => {
+  if (divisor <= 0) {
+    return emptyNutrients();
+  }
+
+  return {
+    calories: round(totals.calories / divisor),
+    protein: round(totals.protein / divisor),
+    carbs: round(totals.carbs / divisor),
+    fat: round(totals.fat / divisor),
+    fiber: round(totals.fiber / divisor),
+    sugar: round(totals.sugar / divisor),
+    sodium: round(totals.sodium / divisor),
+  };
+};
+
+const resolveTrendDirection = (days: WeeklyOverviewDay[]) => {
+  const loggedDays = days.filter((day) => day.mealCount > 0);
+  if (loggedDays.length < 4) {
+    return 'stable' as const;
+  }
+
+  const midpoint = Math.floor(loggedDays.length / 2);
+  const firstHalf = loggedDays.slice(0, midpoint);
+  const secondHalf = loggedDays.slice(midpoint);
+  const firstAverageProtein = firstHalf.reduce((sum, day) => sum + day.totals.protein, 0) / Math.max(firstHalf.length, 1);
+  const secondAverageProtein = secondHalf.reduce((sum, day) => sum + day.totals.protein, 0) / Math.max(secondHalf.length, 1);
+
+  if (secondAverageProtein - firstAverageProtein >= 8) {
+    return 'up' as const;
+  }
+
+  if (firstAverageProtein - secondAverageProtein >= 8) {
+    return 'down' as const;
+  }
+
+  return 'stable' as const;
+};
+
+const buildWeeklySummary = ({
+  goal,
+  loggedDays,
+  consistencyRate,
+  averageCaloriesPerLoggedDay,
+  averageProteinPerLoggedDay,
+  calorieGoalProgress,
+  proteinGoalProgress,
+  trendDirection,
+}: {
+  goal: GoalType;
+  loggedDays: number;
+  consistencyRate: number;
+  averageCaloriesPerLoggedDay: number;
+  averageProteinPerLoggedDay: number;
+  calorieGoalProgress: number | null;
+  proteinGoalProgress: number | null;
+  trendDirection: WeeklyOverview['trendDirection'];
+}) => {
+  const consistencyLine =
+    loggedDays >= 6
+      ? `Je logde ${loggedDays} van de 7 dagen. Dat is sterke regelmaat.`
+      : loggedDays >= 4
+        ? `Je logde ${loggedDays} van de 7 dagen. Je ritme begint echt te staan.`
+        : loggedDays > 0
+          ? `Je logde ${loggedDays} van de 7 dagen. Nog een paar dagen extra maakt je patroon veel duidelijker.`
+          : 'Je hebt deze week nog geen maaltijden gelogd.';
+
+  if (loggedDays === 0) {
+    return {
+      summary: consistencyLine,
+      supportMessage: 'Log je eerste maaltijd en NutriVoice bouwt vanaf daar rustig je weekbeeld op.',
+    };
+  }
+
+  const goalLine =
+    goal === 'build_muscle'
+      ? proteinGoalProgress !== null && proteinGoalProgress >= 85
+        ? 'Je gemiddelde eiwitinname ligt dicht bij je weekdoel.'
+        : `Gemiddeld zit je op ${Math.round(averageProteinPerLoggedDay)} g eiwit per dag.`
+      : goal === 'lose_weight'
+        ? calorieGoalProgress !== null && calorieGoalProgress <= 103
+          ? 'Je gemiddelde calorieinname blijft mooi in de buurt van je doel.'
+          : `Je weekgemiddelde komt uit op ${Math.round(averageCaloriesPerLoggedDay)} kcal per gelogde dag.`
+        : calorieGoalProgress !== null && proteinGoalProgress !== null
+          ? 'Je calorieen en eiwitten bouwen samen aan een stabiele basis.'
+          : `Je weekgemiddelde komt uit op ${Math.round(averageCaloriesPerLoggedDay)} kcal en ${Math.round(averageProteinPerLoggedDay)} g eiwit.`;
+
+  const trendLine =
+    trendDirection === 'up'
+      ? 'Je eiwittrend loopt omhoog ten opzichte van het begin van de week.'
+      : trendDirection === 'down'
+        ? 'Je eiwittrend is iets gedaald. Een extra eiwitmoment kan helpen.'
+        : consistencyRate >= 70
+          ? 'Je week ziet er rustig en consistent uit.'
+          : 'Meer complete logdagen geven een scherper beeld van je voortgang.';
+
+  return {
+    summary: `${consistencyLine} ${goalLine}`.trim(),
+    supportMessage: trendLine,
+  };
+};
+
+export const calculateWeeklyOverview = (
+  meals: MealWithItems[],
+  options?: {
+    referenceDate?: Date;
+    calorieTarget?: number | null;
+    proteinTarget?: number | null;
+    goal?: GoalType;
+  },
+): WeeklyOverview => {
+  const referenceDate = options?.referenceDate ?? new Date();
+  const dates = getWeekDates(referenceDate);
+  const days: WeeklyOverviewDay[] = dates.map((date) => {
+    const mealsForDay = meals.filter((meal) => meal.date === date);
+    const totals = calculateDayTotals(date, mealsForDay);
+
+    return {
+      date,
+      label: date.slice(5),
+      mealCount: mealsForDay.length,
+      totals,
+      calorieProgress: options?.calorieTarget ? calculateProgress(totals.calories, options.calorieTarget) : null,
+      proteinProgress: options?.proteinTarget ? calculateProgress(totals.protein, options.proteinTarget) : null,
+    };
+  });
+
+  const weekTotals = days.reduce<Nutrients>(
+    (totals, day) => ({
+      calories: round(totals.calories + day.totals.calories),
+      protein: round(totals.protein + day.totals.protein),
+      carbs: round(totals.carbs + day.totals.carbs),
+      fat: round(totals.fat + day.totals.fat),
+      fiber: round(totals.fiber + day.totals.fiber),
+      sugar: round(totals.sugar + day.totals.sugar),
+      sodium: round(totals.sodium + day.totals.sodium),
+    }),
+    emptyNutrients(),
+  );
+
+  const loggedDays = days.filter((day) => day.mealCount > 0).length;
+  const totalMeals = days.reduce((sum, day) => sum + day.mealCount, 0);
+  const averages = averageNutrients(weekTotals, 7);
+  const perLoggedDay = averageNutrients(weekTotals, Math.max(loggedDays, 1));
+  const calorieGoalProgress = options?.calorieTarget ? Math.round((perLoggedDay.calories / options.calorieTarget) * 100) : null;
+  const proteinGoalProgress = options?.proteinTarget ? Math.round((perLoggedDay.protein / options.proteinTarget) * 100) : null;
+  const strongestDay = [...days].sort((left, right) => right.totals.protein - left.totals.protein)[0] ?? null;
+  const weakestDay = [...days].filter((day) => day.mealCount > 0).sort((left, right) => left.totals.protein - right.totals.protein)[0] ?? null;
+  const trendDirection = resolveTrendDirection(days);
+  const consistencyRate = Math.round((loggedDays / 7) * 100);
+  const copy = buildWeeklySummary({
+    goal: options?.goal ?? 'maintain',
+    loggedDays,
+    consistencyRate,
+    averageCaloriesPerLoggedDay: perLoggedDay.calories,
+    averageProteinPerLoggedDay: perLoggedDay.protein,
+    calorieGoalProgress,
+    proteinGoalProgress,
+    trendDirection,
+  });
+
+  return {
+    days,
+    dateFrom: dates[0],
+    dateTo: dates[dates.length - 1],
+    loggedDays,
+    consistencyRate,
+    totalMeals,
+    averages,
+    averageCaloriesPerLoggedDay: perLoggedDay.calories,
+    averageProteinPerLoggedDay: perLoggedDay.protein,
+    averageCarbsPerLoggedDay: perLoggedDay.carbs,
+    averageFatPerLoggedDay: perLoggedDay.fat,
+    calorieGoalProgress,
+    proteinGoalProgress,
+    strongestDay: strongestDay?.mealCount ? strongestDay : null,
+    weakestDay: weakestDay ?? null,
+    trendDirection,
+    summary: copy.summary,
+    supportMessage: copy.supportMessage,
+  };
 };
 
 export const toMealTotalsRecord = (nutrients: Nutrients) => ({

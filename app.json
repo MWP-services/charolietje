@@ -19,12 +19,13 @@
       "buildNumber": "1",
       "supportsTablet": false,
       "requireFullScreen": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "NutriVoice gebruikt je camera om streepjescodes van producten te scannen.",
-        "NSMicrophoneUsageDescription": "NutriVoice gebruikt je microfoon om maaltijden op te nemen en om te zetten naar tekst."
-      },
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "NutriVoice gebruikt je camera om streepjescodes van producten te scannen.",
+        "NSMicrophoneUsageDescription": "NutriVoice gebruikt je microfoon om maaltijden op te nemen en om te zetten naar tekst.",
+        "NSUserNotificationsUsageDescription": "NutriVoice gebruikt meldingen voor rustige, relevante herinneringen rond je maaltijden en voortgang."
       }
     },
     "android": {
@@ -51,6 +52,7 @@
     "plugins": [
       "expo-router",
       "expo-asset",
+      "expo-notifications",
       [
         "expo-camera",
         {

@@ -195,3 +195,33 @@ export type DayHistoryEntry = {
   totals: DailyTotals;
   meals: MealWithItems[];
 };
+
+export type WeeklyOverviewDay = {
+  date: string;
+  label: string;
+  mealCount: number;
+  totals: DailyTotals;
+  calorieProgress: number | null;
+  proteinProgress: number | null;
+};
+
+export type WeeklyOverview = {
+  days: WeeklyOverviewDay[];
+  dateFrom: string;
+  dateTo: string;
+  loggedDays: number;
+  consistencyRate: number;
+  totalMeals: number;
+  averages: Nutrients;
+  averageCaloriesPerLoggedDay: number;
+  averageProteinPerLoggedDay: number;
+  averageCarbsPerLoggedDay: number;
+  averageFatPerLoggedDay: number;
+  calorieGoalProgress: number | null;
+  proteinGoalProgress: number | null;
+  strongestDay: WeeklyOverviewDay | null;
+  weakestDay: WeeklyOverviewDay | null;
+  trendDirection: 'up' | 'down' | 'stable';
+  summary: string;
+  supportMessage: string;
+};

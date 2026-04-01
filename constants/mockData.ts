@@ -1,8 +1,9 @@
 import { subDays } from 'date-fns';
 
+import { isSupabaseConfigured } from '@/lib/supabase';
 import type { MealWithItems } from '@/types/meal';
 import type { UserProfile } from '@/types/profile';
-import { createId } from '@/utils/id';
+import { createId, createUuid } from '@/utils/id';
 import { calculateMealTotals, toMealTotalsRecord } from '@/utils/nutrition';
 
 const buildMeal = (
@@ -25,10 +26,10 @@ const buildMeal = (
 ) => {
   const createdAt = subDays(new Date(), offsetDays).toISOString();
   const date = createdAt.slice(0, 10);
-  const mealId = createId('meal');
+  const mealId = isSupabaseConfigured ? createUuid() : createId('meal');
   const items = itemSeeds.map((item) => ({
     ...item,
-    id: createId('item'),
+    id: isSupabaseConfigured ? createUuid() : createId('item'),
     meal_id: mealId,
     confidence: 0.9,
   }));
@@ -63,6 +64,12 @@ export const buildSeedProfile = (userId: string, email?: string | null): UserPro
     weight_kg: 78,
     height_cm: 182,
     has_completed_onboarding: true,
+    has_received_demo: false,
+    notifications_enabled: false,
+    meal_reminders_enabled: true,
+    consistency_reminders_enabled: true,
+    progress_nudges_enabled: true,
+    notification_permission_status: 'undetermined',
     created_at: now,
     updated_at: now,
   };

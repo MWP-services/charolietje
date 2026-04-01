@@ -23,6 +23,7 @@ type NutrientMatch = {
   matched: boolean;
   source: 'open_food_facts' | 'usda' | 'ai_estimate' | null;
   matchedName?: string | null;
+  matchScore?: number;
 };
 
 type AiNutritionEstimate = {
@@ -145,6 +146,8 @@ const nameAliases: Record<string, string> = {
   kaas: 'cheese',
   pastasaus: 'pasta sauce',
   tomatensaus: 'pasta sauce',
+  lasagne: 'lasagna',
+  lasagna: 'lasagna',
   eiwitreep: 'protein bar',
   proteinebar: 'protein bar',
   leverworst: 'liverwurst',
@@ -187,6 +190,7 @@ const emptyMatch = (): NutrientMatch => ({
   matched: false,
   source: null,
   matchedName: null,
+  matchScore: 0,
 });
 
 const toSafeNumber = (value: unknown) => {
@@ -262,6 +266,42 @@ const getQueryCandidates = (item: ParsedMealItem) => {
   const aliasQueries = (item.searchAliases ?? []).map((alias) => normalizeName(alias));
 
   return [...new Set([normalized, cleanQuery(normalized), ...aliasQueries.map(cleanQuery)].filter((query) => query.length >= 3))];
+};
+
+const getNameTokens = (value: string) =>
+  cleanQuery(normalizeName(value))
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+
+const getNameSimilarity = (query: string, candidate: string) => {
+  const normalizedQuery = cleanQuery(normalizeName(query));
+  const normalizedCandidate = cleanQuery(normalizeName(candidate));
+
+  if (!normalizedQuery || !normalizedCandidate) {
+    return 0;
+  }
+
+  if (normalizedQuery === normalizedCandidate) {
+    return 1;
+  }
+
+  if (normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate)) {
+    return 0.9;
+  }
+
+  const queryTokens = getNameTokens(normalizedQuery);
+  const candidateTokens = getNameTokens(normalizedCandidate);
+  if (!queryTokens.length || !candidateTokens.length) {
+    return 0;
+  }
+
+  const candidateTokenSet = new Set(candidateTokens);
+  const matchedTokens = queryTokens.filter((token) => candidateTokenSet.has(token)).length;
+  const queryCoverage = matchedTokens / queryTokens.length;
+  const candidateCoverage = matchedTokens / candidateTokens.length;
+
+  return Math.max(queryCoverage * 0.75 + candidateCoverage * 0.25, 0);
 };
 
 const normalizeUnit = (unit: string) => {
@@ -409,6 +449,7 @@ const buildMatch = (
   },
   source: 'open_food_facts' | 'usda' | 'ai_estimate',
   matchedName?: string | null,
+  matchScore = 1,
 ): NutrientMatch => ({
   calories: round(nutrients.calories),
   protein: round(nutrients.protein),
@@ -420,6 +461,7 @@ const buildMatch = (
   matched: true,
   source,
   matchedName: matchedName ?? null,
+  matchScore,
 });
 
 const getNutrientsForSuffix = (nutriments: Record<string, number | string | undefined>, suffix: '_100g' | '_100ml' | '_serving', multiplier: number) => ({
@@ -450,6 +492,35 @@ const buildAiEstimateMatch = (estimate: AiNutritionEstimate): NutrientMatch => {
     'ai_estimate',
     estimate.matchedName,
   );
+};
+
+const isNutritionPlausibleForQuantity = (item: ParsedMealItem, match: NutrientMatch) => {
+  const normalizedUnit = normalizeUnit(item.unit);
+
+  if (!match.matched || (normalizedUnit !== 'gram' && normalizedUnit !== 'ml')) {
+    return true;
+  }
+
+  const quantityBasis = Math.max(item.quantity, 1);
+  const protein = Math.max(match.protein ?? 0, 0);
+  const carbs = Math.max(match.carbs ?? 0, 0);
+  const fat = Math.max(match.fat ?? 0, 0);
+  const calories = Math.max(match.calories ?? 0, 0);
+  const macroMass = protein + carbs + fat;
+
+  if (protein > quantityBasis * 1.05 || carbs > quantityBasis * 1.05 || fat > quantityBasis * 1.05) {
+    return false;
+  }
+
+  if (macroMass > quantityBasis * 1.12) {
+    return false;
+  }
+
+  if (calories > quantityBasis * 9.1) {
+    return false;
+  }
+
+  return true;
 };
 
 const parseServingInfo = (product: OpenFoodFactsProduct) => {
@@ -496,69 +567,82 @@ const getOpenFoodFactsMatchForQuery = async (query: string, item: ParsedMealItem
   const requestedVolume = toVolume(item.quantity, unit);
   const requestedWeight = toWeight(item.quantity, unit);
   const requestedCount = countUnits.has(unit) ? item.quantity : null;
+  let bestMatch = emptyMatch();
 
   for (const product of products) {
+    const matchName = product.product_name ?? query;
+    const matchScore = getNameSimilarity(query, matchName);
+    if (matchScore < 0.52) {
+      continue;
+    }
+
     const nutriments = product.nutriments ?? {};
     const caloriesServing = readNumeric(nutriments['energy-kcal_serving']);
     const calories100g = readNumeric(nutriments['energy-kcal_100g']);
     const calories100ml = readNumeric(nutriments['energy-kcal_100ml']);
     const servingInfo = parseServingInfo(product);
+    let candidateMatch = emptyMatch();
 
     if (requestedVolume !== null) {
       if (calories100ml) {
-        return buildMatch(getNutrientsForSuffix(nutriments, '_100ml', requestedVolume / 100), 'open_food_facts', product.product_name ?? query);
+        candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_100ml', requestedVolume / 100), 'open_food_facts', matchName, matchScore);
       }
 
-      if (caloriesServing && servingInfo) {
+      if (!candidateMatch.matched && caloriesServing && servingInfo) {
         const servingVolume = toVolume(servingInfo.quantity, servingInfo.unit);
         if (servingVolume) {
-          return buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedVolume / servingVolume), 'open_food_facts', product.product_name ?? query);
+          candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedVolume / servingVolume), 'open_food_facts', matchName, matchScore);
         }
       }
     }
 
-    if (requestedWeight !== null) {
+    if (!candidateMatch.matched && requestedWeight !== null) {
       if (calories100g) {
-        return buildMatch(getNutrientsForSuffix(nutriments, '_100g', requestedWeight / 100), 'open_food_facts', product.product_name ?? query);
+        candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_100g', requestedWeight / 100), 'open_food_facts', matchName, matchScore);
       }
 
-      if (caloriesServing && servingInfo) {
+      if (!candidateMatch.matched && caloriesServing && servingInfo) {
         const servingWeight = toWeight(servingInfo.quantity, servingInfo.unit);
         if (servingWeight) {
-          return buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedWeight / servingWeight), 'open_food_facts', product.product_name ?? query);
+          candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedWeight / servingWeight), 'open_food_facts', matchName, matchScore);
         }
       }
     }
 
-    if (requestedCount !== null) {
+    if (!candidateMatch.matched && requestedCount !== null) {
       if (caloriesServing) {
         const servingCount = servingInfo && countUnits.has(normalizeUnit(servingInfo.unit)) ? servingInfo.quantity : 1;
-        return buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedCount / servingCount), 'open_food_facts', product.product_name ?? query);
+        candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_serving', requestedCount / servingCount), 'open_food_facts', matchName, matchScore);
       }
 
-      if (calories100g && servingInfo) {
+      if (!candidateMatch.matched && calories100g && servingInfo) {
         const servingWeight = toWeight(servingInfo.quantity, servingInfo.unit);
         if (servingWeight) {
-          return buildMatch(getNutrientsForSuffix(nutriments, '_100g', (servingWeight * requestedCount) / 100), 'open_food_facts', product.product_name ?? query);
+          candidateMatch = buildMatch(getNutrientsForSuffix(nutriments, '_100g', (servingWeight * requestedCount) / 100), 'open_food_facts', matchName, matchScore);
         }
       }
+    }
+
+    if (candidateMatch.matched && isNutritionPlausibleForQuantity(item, candidateMatch) && (candidateMatch.matchScore ?? 0) > (bestMatch.matchScore ?? 0)) {
+      bestMatch = candidateMatch;
     }
   }
 
-  return emptyMatch();
+  return bestMatch;
 };
 
 const getOpenFoodFactsMatch = async (item: ParsedMealItem): Promise<NutrientMatch> => {
   const queries = getQueryCandidates(item);
+  let bestMatch = emptyMatch();
 
   for (const query of queries) {
     const match = await getOpenFoodFactsMatchForQuery(query, item);
-    if (match.matched) {
-      return match;
+    if (match.matched && (match.matchScore ?? 0) > (bestMatch.matchScore ?? 0)) {
+      bestMatch = match;
     }
   }
 
-  return emptyMatch();
+  return bestMatch;
 };
 
 const getUsdaNutrientValue = (
@@ -603,17 +687,26 @@ const getUsdaMatchForQuery = async (query: string, item: ParsedMealItem, apiKey:
   };
 
   const foods = data.foods ?? [];
+  let bestMatch = emptyMatch();
 
   for (const food of foods) {
+    const matchName = food.description ?? query;
+    const matchScore = getNameSimilarity(query, matchName);
+    if (matchScore < 0.52) {
+      continue;
+    }
+
     const foodNutrients = food.foodNutrients ?? [];
     const calories = getUsdaNutrientValue(foodNutrients, (name, nutrientUnit) => (name === 'energy' || name.includes('energy')) && nutrientUnit === 'kcal');
     if (!calories) {
       continue;
     }
 
+    let candidateMatch = emptyMatch();
+
     if (requestedWeight !== null) {
       const multiplier = requestedWeight / 100;
-      return buildMatch(
+      candidateMatch = buildMatch(
         {
           calories: calories * multiplier,
           protein: getUsdaNutrientValue(foodNutrients, (name) => name.includes('protein')) * multiplier,
@@ -624,21 +717,22 @@ const getUsdaMatchForQuery = async (query: string, item: ParsedMealItem, apiKey:
           sodium: toMilligrams(getUsdaNutrientValue(foodNutrients, (name) => name.includes('sodium')), 'mg') * multiplier,
         },
         'usda',
-        food.description ?? query,
+        matchName,
+        matchScore,
       );
     }
 
     const servingUnit = normalizeUnit(food.servingSizeUnit ?? '');
     const servingSize = food.servingSize ?? 0;
 
-    if (requestedVolume !== null) {
+    if (!candidateMatch.matched && requestedVolume !== null) {
       const servingVolume = toVolume(servingSize, servingUnit);
       if (!servingVolume) {
         continue;
       }
 
       const multiplier = requestedVolume / servingVolume;
-      return buildMatch(
+      candidateMatch = buildMatch(
         {
           calories: calories * multiplier,
           protein: getUsdaNutrientValue(foodNutrients, (name) => name.includes('protein')) * multiplier,
@@ -649,13 +743,14 @@ const getUsdaMatchForQuery = async (query: string, item: ParsedMealItem, apiKey:
           sodium: toMilligrams(getUsdaNutrientValue(foodNutrients, (name) => name.includes('sodium')), 'mg') * multiplier,
         },
         'usda',
-        food.description ?? query,
+        matchName,
+        matchScore,
       );
     }
 
-    if (requestedCount !== null && countUnits.has(servingUnit) && servingSize) {
+    if (!candidateMatch.matched && requestedCount !== null && countUnits.has(servingUnit) && servingSize) {
       const multiplier = requestedCount / servingSize;
-      return buildMatch(
+      candidateMatch = buildMatch(
         {
           calories: calories * multiplier,
           protein: getUsdaNutrientValue(foodNutrients, (name) => name.includes('protein')) * multiplier,
@@ -666,25 +761,31 @@ const getUsdaMatchForQuery = async (query: string, item: ParsedMealItem, apiKey:
           sodium: toMilligrams(getUsdaNutrientValue(foodNutrients, (name) => name.includes('sodium')), 'mg') * multiplier,
         },
         'usda',
-        food.description ?? query,
+        matchName,
+        matchScore,
       );
+    }
+
+    if (candidateMatch.matched && isNutritionPlausibleForQuantity(item, candidateMatch) && (candidateMatch.matchScore ?? 0) > (bestMatch.matchScore ?? 0)) {
+      bestMatch = candidateMatch;
     }
   }
 
-  return emptyMatch();
+  return bestMatch;
 };
 
 const getUsdaMatch = async (item: ParsedMealItem, apiKey: string | null): Promise<NutrientMatch> => {
   const queries = getQueryCandidates(item);
+  let bestMatch = emptyMatch();
 
   for (const query of queries) {
     const match = await getUsdaMatchForQuery(query, item, apiKey);
-    if (match.matched) {
-      return match;
+    if (match.matched && (match.matchScore ?? 0) > (bestMatch.matchScore ?? 0)) {
+      bestMatch = match;
     }
   }
 
-  return emptyMatch();
+  return bestMatch;
 };
 
 const getAiEstimate = async (item: ParsedMealItem, openAiKey: string | null, model: string): Promise<NutrientMatch> => {
@@ -756,7 +857,7 @@ const getAiEstimate = async (item: ParsedMealItem, openAiKey: string | null, mod
 const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null, openAiKey: string | null, aiNutritionModel: string) => {
   try {
     const openFoodFactsMatch = await getOpenFoodFactsMatch(item);
-    if (openFoodFactsMatch.matched) {
+    if (openFoodFactsMatch.matched && isNutritionPlausibleForQuantity(item, openFoodFactsMatch)) {
       return openFoodFactsMatch;
     }
   } catch (error) {
@@ -765,7 +866,7 @@ const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null, openA
 
   try {
     const usdaMatch = await getUsdaMatch(item, usdaApiKey);
-    if (usdaMatch.matched) {
+    if (usdaMatch.matched && isNutritionPlausibleForQuantity(item, usdaMatch)) {
       return usdaMatch;
     }
   } catch (error) {
@@ -774,7 +875,7 @@ const lookupItem = async (item: ParsedMealItem, usdaApiKey: string | null, openA
 
   try {
     const aiEstimate = await getAiEstimate(item, openAiKey, aiNutritionModel);
-    if (aiEstimate.matched) {
+    if (aiEstimate.matched && isNutritionPlausibleForQuantity(item, aiEstimate)) {
       return aiEstimate;
     }
   } catch (error) {

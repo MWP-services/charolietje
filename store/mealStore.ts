@@ -25,6 +25,8 @@ type MealState = {
   consumePendingScannedItem: (targetKey: string) => AnalyzedMealItem | null;
   analyzeDraft: (userId?: string | null) => Promise<AnalyzedMeal>;
   updateDraftItem: (index: number, updates: Partial<AnalyzedMealItem>) => void;
+  duplicateDraftItem: (index: number) => void;
+  removeDraftItem: (index: number) => void;
   answerDraftClarification: (questionId: string, selectedOptionIds: string[], userId?: string | null) => Promise<AnalyzedMeal>;
   skipDraftClarification: (questionId: string, userId?: string | null) => Promise<AnalyzedMeal>;
   clearDraft: () => void;
@@ -105,6 +107,68 @@ export const useMealStore = create<MealState>((set, get) => ({
         draftAnalysis: {
           ...state.draftAnalysis,
           items,
+          totals: calculateMealTotals(items),
+        },
+      };
+    });
+  },
+  duplicateDraftItem(index) {
+    set((state) => {
+      if (!state.draftAnalysis || !state.draftAnalysis.items[index]) {
+        return state;
+      }
+
+      const sourceItem = state.draftAnalysis.items[index];
+      const items = [
+        ...state.draftAnalysis.items.slice(0, index + 1),
+        {
+          ...sourceItem,
+          needsClarification: false,
+          clarificationType: null,
+          clarificationQuestion: null,
+          clarificationOptions: [],
+          derivedFromClarification: false,
+          parentItemName: null,
+          nutritionSource: sourceItem.nutritionSource === 'matched' ? 'manual' : sourceItem.nutritionSource,
+        },
+        ...state.draftAnalysis.items.slice(index + 1),
+      ];
+
+      return {
+        draftAnalysis: {
+          ...state.draftAnalysis,
+          items,
+          totals: calculateMealTotals(items),
+        },
+      };
+    });
+  },
+  removeDraftItem(index) {
+    set((state) => {
+      if (!state.draftAnalysis || state.draftAnalysis.items.length <= 1) {
+        return state;
+      }
+
+      const items = state.draftAnalysis.items.filter((_, itemIndex) => itemIndex !== index);
+      const clarifications = state.draftAnalysis.clarifications
+        .filter((question) => question.itemIndex !== index)
+        .map((question) => ({
+          ...question,
+          itemIndex: question.itemIndex > index ? question.itemIndex - 1 : question.itemIndex,
+        }));
+      const clarificationAnswers = state.draftAnalysis.clarificationAnswers
+        .filter((answer) => answer.itemIndex !== index)
+        .map((answer) => ({
+          ...answer,
+          itemIndex: answer.itemIndex > index ? answer.itemIndex - 1 : answer.itemIndex,
+        }));
+
+      return {
+        draftAnalysis: {
+          ...state.draftAnalysis,
+          items,
+          clarifications,
+          clarificationAnswers,
           totals: calculateMealTotals(items),
         },
       };

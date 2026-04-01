@@ -8,6 +8,7 @@ type SettingsRowProps = {
   rightText?: string;
   switchValue?: boolean;
   onSwitchChange?: (value: boolean) => void;
+  disabled?: boolean;
 };
 
 export const SettingsRow = ({
@@ -16,6 +17,7 @@ export const SettingsRow = ({
   rightText,
   switchValue,
   onSwitchChange,
+  disabled = false,
 }: SettingsRowProps) => (
   <View
     style={{
@@ -28,7 +30,7 @@ export const SettingsRow = ({
       alignItems: 'center',
     }}>
     <View style={{ flex: 1, gap: 3 }}>
-      <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>{title}</Text>
+      <Text style={{ color: disabled ? colors.textMuted : colors.text, fontSize: 15, fontFamily: 'Manrope_700Bold' }}>{title}</Text>
       {description ? (
         <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20, fontFamily: 'Manrope_500Medium' }}>
           {description}
@@ -36,7 +38,13 @@ export const SettingsRow = ({
       ) : null}
     </View>
     {typeof switchValue === 'boolean' && onSwitchChange ? (
-      <Switch onValueChange={onSwitchChange} thumbColor={colors.surface} trackColor={{ false: '#D4E5DE', true: colors.primary }} value={switchValue} />
+      <Switch
+        disabled={disabled}
+        onValueChange={onSwitchChange}
+        thumbColor={colors.surface}
+        trackColor={{ false: '#D4E5DE', true: colors.primary }}
+        value={switchValue}
+      />
     ) : (
       <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: 'Manrope_600SemiBold' }}>{rightText}</Text>
     )}

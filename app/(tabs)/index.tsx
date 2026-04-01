@@ -17,29 +17,13 @@ import { colors } from '@/constants/colors';
 import { useAppDataRefresh } from '@/hooks/useAppDataRefresh';
 import { useDailyTotals } from '@/hooks/useDailyTotals';
 import { useMeals } from '@/hooks/useMeals';
+import { useWeeklyOverview } from '@/hooks/useWeeklyOverview';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
-import { getLastNDates, getTodayIsoDate } from '@/utils/date';
+import { getTodayIsoDate } from '@/utils/date';
 import { formatCalories } from '@/utils/formatting';
-
-const getStreak = (dates: string[]) => {
-  let streak = 0;
-  const days = new Set(dates);
-  const today = new Date();
-
-  while (true) {
-    const current = new Date(today);
-    current.setDate(today.getDate() - streak);
-    const iso = current.toISOString().slice(0, 10);
-    if (!days.has(iso)) {
-      break;
-    }
-    streak += 1;
-  }
-
-  return streak;
-};
+import { getStreakFromDates } from '@/utils/nutrition';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -52,18 +36,9 @@ export default function DashboardScreen() {
   const totals = useDailyTotals();
   const todayMeals = useMeals(getTodayIsoDate());
   const allMeals = useMeals();
-  const streak = getStreak([...new Set(allMeals.map((meal) => meal.date))]);
-  const last7Dates = getLastNDates(7);
+  const streak = getStreakFromDates([...new Set(allMeals.map((meal) => meal.date))]);
+  const weeklyOverview = useWeeklyOverview();
   const isGuestMode = session?.provider === 'guest';
-
-  const weeklyAverages = last7Dates.map((date) => {
-    const mealsForDay = allMeals.filter((meal) => meal.date === date);
-    const calories = mealsForDay.reduce((sum, meal) => sum + meal.total_calories, 0);
-    return {
-      label: date.slice(5),
-      value: Math.min(100, Math.round((calories / 2800) * 100)),
-    };
-  });
 
   return (
     <ScreenContainer
@@ -74,7 +49,7 @@ export default function DashboardScreen() {
       <View style={{ gap: 8 }}>
         <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_700Bold', letterSpacing: 0.6 }}>VANDAAG</Text>
         <Text style={{ color: colors.text, fontSize: 31, lineHeight: 38, fontFamily: 'Manrope_800ExtraBold' }}>
-          Hoi {profile?.full_name?.split(' ')[0] ?? 'daar'}, je voedingsoverzicht staat klaar.
+          Hoi {profile?.full_name?.split(' ')[0] ?? 'daar'}, dit is je dag in een oogopslag.
         </Text>
       </View>
 
@@ -106,23 +81,23 @@ export default function DashboardScreen() {
       <StreakCard days={streak} />
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard label="Calorieen" value={formatCalories(totals.calories)} />
-        <NutrientStatCard accent={colors.secondary} label="Eiwit" value={`${Math.round(totals.protein)} g`} />
+        <NutrientStatCard label="Calorieen" priority="primary" value={formatCalories(totals.calories)} />
+        <NutrientStatCard accent={colors.secondary} label="Eiwit" priority="primary" value={`${Math.round(totals.protein)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#F59E0B" label="Koolhydraten" value={`${Math.round(totals.carbs)} g`} />
-        <NutrientStatCard accent="#E85D75" label="Vet" value={`${Math.round(totals.fat)} g`} />
+        <NutrientStatCard accent="#F59E0B" label="Koolhydraten" priority="primary" value={`${Math.round(totals.carbs)} g`} />
+        <NutrientStatCard accent="#E85D75" label="Vet" priority="primary" value={`${Math.round(totals.fat)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#8B5CF6" label="Vezels" value={`${Math.round(totals.fiber)} g`} />
-        <NutrientStatCard accent="#F97316" label="Suiker" value={`${Math.round(totals.sugar)} g`} />
+        <NutrientStatCard accent="#8B5CF6" label="Vezels" priority="secondary" value={`${Math.round(totals.fiber)} g`} />
+        <NutrientStatCard accent="#F97316" label="Suiker" priority="secondary" value={`${Math.round(totals.sugar)} g`} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <NutrientStatCard accent="#2563EB" label="Natrium" value={`${Math.round(totals.sodium)} mg`} />
-        <NutrientStatCard accent="#0F766E" label="Maaltijden vandaag" value={String(todayMeals.length)} />
+        <NutrientStatCard accent="#2563EB" label="Natrium" priority="secondary" value={`${Math.round(totals.sodium)} mg`} />
+        <NutrientStatCard accent="#0F766E" label="Maaltijden vandaag" priority="secondary" value={String(todayMeals.length)} />
       </View>
 
       <InsightBanner
@@ -137,6 +112,8 @@ export default function DashboardScreen() {
 
       <MacroProgressCard color={colors.primary} current={totals.calories} target={profile?.calorie_target ?? null} title="Caloriedoel" unit=" kcal" />
       <MacroProgressCard color={colors.secondary} current={totals.protein} target={profile?.protein_target ?? null} title="Eiwitdoel" unit=" g" />
+
+      <WeeklySummaryCard overview={weeklyOverview} onPress={() => router.push('/(tabs)/history')} />
 
       <SectionHeader
         action={
@@ -163,9 +140,6 @@ export default function DashboardScreen() {
           title="Nog geen maaltijden vandaag"
         />
       )}
-
-      <WeeklySummaryCard averages={weeklyAverages} />
-
       {profile?.is_premium ? <SectionHeader subtitle="Je AI-coach is ontgrendeld." title="Premium advies" /> : null}
       {profile?.is_premium ? (
         <Pressable onPress={() => router.push('/(tabs)/premium')}>

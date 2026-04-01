@@ -7,6 +7,17 @@ import { mealCorrectionService } from '@/services/meals/mealCorrectionService';
 import { nutritionService } from '@/services/nutrition/nutritionService';
 import { transcribeAudioWithOpenAI } from '@/services/ai/transcriptionService';
 
+type ClarificationAction =
+  | {
+      kind: 'answer';
+      questionId: string;
+      selectedOptionIds: string[];
+    }
+  | {
+      kind: 'skip';
+      questionId: string;
+    };
+
 const sampleTranscriptions = [
   'Als ontbijt heb ik 2 boterhammen met pindakaas gegeten en een glas halfvolle melk.',
   'Voor lunch at ik een kipsandwich en een appel.',
@@ -723,6 +734,39 @@ export const aiService = {
     const items = await nutritionService.getNutritionForItems(parsedMeal.items, userId);
     return mealClarificationService.toAnalyzedMeal(parsedMeal, items, initialParsedMeal ?? parsedMeal, clarificationAnswers);
   },
+  async replayClarifications(
+    initialParsedMeal: ParsedMeal,
+    actions: ClarificationAction[],
+    userId?: string | null,
+  ): Promise<AnalyzedMeal> {
+    let workingParsedMeal = mealClarificationService.enrichParsedMeal(initialParsedMeal, initialParsedMeal.originalText);
+    const appliedAnswers: ClarificationAnswer[] = [];
+
+    for (const action of actions) {
+      if (action.kind === 'skip') {
+        workingParsedMeal = mealClarificationService.skipClarification(workingParsedMeal, action.questionId);
+        const skippedQuestion = workingParsedMeal.clarifications.find((entry) => entry.id === action.questionId);
+
+        appliedAnswers.push({
+          questionId: action.questionId,
+          itemIndex: skippedQuestion?.itemIndex ?? 0,
+          itemName: skippedQuestion?.itemName ?? '',
+          type: skippedQuestion?.type ?? 'portion_size',
+          selectedOptionIds: [],
+          selectedLabels: [],
+          skipped: true,
+          answeredAt: new Date().toISOString(),
+        });
+        continue;
+      }
+
+      const result = mealClarificationService.applyClarificationAnswer(workingParsedMeal, action.questionId, action.selectedOptionIds);
+      workingParsedMeal = result.parsedMeal;
+      appliedAnswers.push(result.answer);
+    }
+
+    return this.recalculateParsedMeal(workingParsedMeal, userId, initialParsedMeal, appliedAnswers);
+  },
   async analyzeText(text: string, userId?: string | null): Promise<AnalyzedMeal> {
     const parsed = await this.parseMealText(text, userId);
     return this.recalculateParsedMeal(parsed, userId, parsed, []);
@@ -733,28 +777,47 @@ export const aiService = {
     selectedOptionIds: string[],
     userId?: string | null,
   ): Promise<AnalyzedMeal> {
-    const parsedMeal = mealClarificationService.toParsedMealFromAnalysis(analysis);
-    const { parsedMeal: nextParsedMeal, answer } = mealClarificationService.applyClarificationAnswer(parsedMeal, questionId, selectedOptionIds);
-    const clarificationAnswers = [...analysis.clarificationAnswers.filter((entry) => entry.questionId !== questionId), answer];
-    return this.recalculateParsedMeal(nextParsedMeal, userId, analysis.initialParsedMeal, clarificationAnswers);
+    const existingActions: ClarificationAction[] = analysis.clarificationAnswers
+      .filter((entry) => entry.questionId !== questionId)
+      .map((entry) =>
+        entry.skipped
+          ? {
+              kind: 'skip' as const,
+              questionId: entry.questionId,
+            }
+          : {
+              kind: 'answer' as const,
+              questionId: entry.questionId,
+              selectedOptionIds: entry.selectedOptionIds,
+            },
+      );
+
+    return this.replayClarifications(
+      analysis.initialParsedMeal,
+      [...existingActions, { kind: 'answer', questionId, selectedOptionIds }],
+      userId,
+    );
   },
   async skipClarificationQuestion(analysis: AnalyzedMeal, questionId: string, userId?: string | null): Promise<AnalyzedMeal> {
-    const parsedMeal = mealClarificationService.toParsedMealFromAnalysis(analysis);
-    const nextParsedMeal = mealClarificationService.skipClarification(parsedMeal, questionId);
-    const clarificationAnswers = [
-      ...analysis.clarificationAnswers.filter((entry) => entry.questionId !== questionId),
-      {
-        questionId,
-        itemIndex: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.itemIndex ?? 0,
-        itemName: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.itemName ?? '',
-        type: nextParsedMeal.clarifications.find((entry) => entry.id === questionId)?.type ?? 'portion_size',
-        selectedOptionIds: [],
-        selectedLabels: [],
-        skipped: true,
-        answeredAt: new Date().toISOString(),
-      } satisfies ClarificationAnswer,
-    ];
+    const existingActions: ClarificationAction[] = analysis.clarificationAnswers
+      .filter((entry) => entry.questionId !== questionId)
+      .map((entry) =>
+        entry.skipped
+          ? {
+              kind: 'skip' as const,
+              questionId: entry.questionId,
+            }
+          : {
+              kind: 'answer' as const,
+              questionId: entry.questionId,
+              selectedOptionIds: entry.selectedOptionIds,
+            },
+      );
 
-    return this.recalculateParsedMeal(nextParsedMeal, userId, analysis.initialParsedMeal, clarificationAnswers);
+    return this.replayClarifications(
+      analysis.initialParsedMeal,
+      [...existingActions, { kind: 'skip', questionId }],
+      userId,
+    );
   },
 };

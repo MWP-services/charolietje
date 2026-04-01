@@ -9,10 +9,12 @@ import { Card } from '@/components/common/Card';
 import { FadeInView } from '@/components/common/FadeInView';
 import { FormField } from '@/components/common/FormField';
 import { InlineMessage } from '@/components/common/InlineMessage';
+import { NutritionSummaryCard } from '@/components/common/NutritionSummaryCard';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { ScreenContainer } from '@/components/common/ScreenContainer';
 import { SecondaryButton } from '@/components/common/SecondaryButton';
 import { MealTypeSelector } from '@/components/meal/MealTypeSelector';
+import { QuickEditControls } from '@/components/meal/QuickEditControls';
 import { NutritionInputs } from '@/components/meal/NutritionInputs';
 import { colors } from '@/constants/colors';
 import { useMeals } from '@/hooks/useMeals';
@@ -23,6 +25,7 @@ import { useMealStore } from '@/store/mealStore';
 import { useProfileStore } from '@/store/profileStore';
 import type { MealItem, MealType } from '@/types/meal';
 import type { NutrientKey } from '@/types/nutrition';
+import { getQuickEditPresets, getQuickEditStep } from '@/utils/mealEditing';
 import { createId, createUuid } from '@/utils/id';
 import { calculateMealTotals, emptyOptionalNutrients, getMissingNutritionLabels, hasCompleteNutrition, scaleItemNutritionToQuantity, toMealTotalsRecord } from '@/utils/nutrition';
 
@@ -59,6 +62,12 @@ export default function EditMealScreen() {
     }
 
     updateItem(itemId, scaleItemNutritionToQuantity(item, nextQuantity, nextUnit ?? item.unit));
+  };
+
+  const nudgeItemPortion = (itemId: string, unit: string, quantity: number, direction: -1 | 1) => {
+    const step = getQuickEditStep(unit);
+    const nextQuantity = Math.max(step < 1 ? 0.5 : 1, Math.round((quantity + direction * step) * 10) / 10);
+    updateItemPortion(itemId, nextQuantity);
   };
 
   const updateItemNutrient = (itemId: string, key: NutrientKey, value: number | null) => {
@@ -244,11 +253,11 @@ export default function EditMealScreen() {
 
   return (
     <ScreenContainer>
-      <AppHeader showBackButton subtitle="Verfijn maaltijdtekst, itemschattingen en maaltijdtype." title="Maaltijd bewerken" />
+      <AppHeader showBackButton subtitle="Werk tekst, porties en voedingswaardes bij tot het totaal klopt." title="Maaltijd bewerken" />
       {error ? <InlineMessage actionLabel="Sluiten" onActionPress={() => setError(null)} title={error} tone="error" /> : null}
 
       <FadeInView delay={20}>
-        <FormField label="Originele tekst" multiline onChangeText={setText} value={text} />
+        <FormField label="Maaltijdtekst" multiline onChangeText={setText} value={text} />
       </FadeInView>
 
       <FadeInView delay={60}>
@@ -266,6 +275,18 @@ export default function EditMealScreen() {
             <View key={item.id} style={{ gap: 12, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: 'Manrope_700Bold' }}>ITEM {index + 1}</Text>
               <FormField autoCapitalize="words" label="Naam" onChangeText={(value) => updateItem(item.id, { name: value })} value={item.name} />
+              <QuickEditControls
+                canRemove={items.length > 1}
+                manualOpen
+                onDecrease={() => nudgeItemPortion(item.id, item.unit, item.quantity, -1)}
+                onDuplicate={() => duplicateItem(item)}
+                onIncrease={() => nudgeItemPortion(item.id, item.unit, item.quantity, 1)}
+                onPresetPress={(preset) => updateItemPortion(item.id, preset.quantity, preset.unit)}
+                onRemove={() => removeItem(item.id)}
+                onToggleManual={() => undefined}
+                presets={getQuickEditPresets(item.quantity, item.unit)}
+                showManualToggle={false}
+              />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <FormField
@@ -286,18 +307,10 @@ export default function EditMealScreen() {
               />
               <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Manrope_500Medium' }}>
                 {hasCompleteNutrition(item)
-                  ? `Voorbeeld: ${Math.round(item.calories ?? 0)} kcal - ${Math.round(item.protein ?? 0)}g eiwit - ${Math.round(item.carbs ?? 0)}g koolhydraten - ${Math.round(item.fat ?? 0)}g vet`
+                  ? `Nu: ${Math.round(item.calories ?? 0)} kcal • ${Math.round(item.protein ?? 0)}g eiwit • ${Math.round(item.carbs ?? 0)}g koolhydraten • ${Math.round(item.fat ?? 0)}g vet`
                   : `Voedingswaarde ontbreekt nog: ${getMissingNutritionLabels(item).join(', ')}`}
               </Text>
               <NutritionInputs onChange={(key, value) => updateItemNutrient(item.id, key, value)} values={item} />
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <SecondaryButton label="Item dupliceren" onPress={() => duplicateItem(item)} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <SecondaryButton disabled={items.length === 1} label={items.length === 1 ? 'Minstens 1 item nodig' : 'Item verwijderen'} onPress={() => removeItem(item.id)} />
-                </View>
-              </View>
             </View>
           ))}
           <SecondaryButton label="Item toevoegen" onPress={addItem} />
@@ -305,22 +318,15 @@ export default function EditMealScreen() {
       </FadeInView>
 
       <FadeInView delay={140}>
-        <Card style={{ gap: 8 }}>
-          <Text style={{ color: colors.text, fontFamily: 'Manrope_700Bold', fontSize: 16 }}>Herberekende preview</Text>
+        <NutritionSummaryCard subtitle="Zo ziet het aangepaste maaltijdtotaal er nu uit." title="Live preview" totals={previewTotals}>
           {items.some((item) => !hasCompleteNutrition(item)) ? (
             <InlineMessage
               description="De preview telt alleen de bekende waardes mee totdat je de ontbrekende velden hebt ingevuld."
-              title="Preview is nog niet volledig"
+              title="Nog niet volledig"
               tone="info"
             />
           ) : null}
-          <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            {Math.round(previewTotals.calories)} kcal - {Math.round(previewTotals.protein)}g eiwit - {Math.round(previewTotals.carbs)}g koolhydraten - {Math.round(previewTotals.fat)}g vet
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontFamily: 'Manrope_500Medium' }}>
-            Vezels {Math.round(previewTotals.fiber)}g - Suiker {Math.round(previewTotals.sugar)}g - Natrium {Math.round(previewTotals.sodium)}mg
-          </Text>
-        </Card>
+        </NutritionSummaryCard>
       </FadeInView>
 
       <PrimaryButton label="Wijzigingen opslaan" loading={isSaving} onPress={onSave} />

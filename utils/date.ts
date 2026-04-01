@@ -1,4 +1,5 @@
 import {
+  addDays,
   format,
   formatDistanceToNowStrict,
   isSameDay,
@@ -11,6 +12,7 @@ import { nl } from 'date-fns/locale';
 import type { MealWithItems } from '@/types/meal';
 
 export const getTodayIsoDate = () => format(new Date(), 'yyyy-MM-dd');
+export const toIsoDate = (date: Date) => format(date, 'yyyy-MM-dd');
 
 export const formatDisplayDate = (date: string) => format(parseISO(date), 'EEEE d MMM', { locale: nl });
 
@@ -29,6 +31,17 @@ export const getLastNDates = (count: number) =>
   Array.from({ length: count }, (_, index) => format(subDays(new Date(), index), 'yyyy-MM-dd')).reverse();
 
 export const getWeekStartIso = () => format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+export const getWeekDates = (referenceDate = new Date()) => {
+  const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+  return Array.from({ length: 7 }, (_, index) => format(addDays(start, index), 'yyyy-MM-dd'));
+};
+
+export const combineDateAndTimeIso = (date: string, hours: number, minutes: number) => {
+  const scheduled = parseISO(`${date}T00:00:00`);
+  scheduled.setHours(hours, minutes, 0, 0);
+  return scheduled.toISOString();
+};
 
 export const sortMealsByCreatedAt = (meals: MealWithItems[]) =>
   [...meals].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

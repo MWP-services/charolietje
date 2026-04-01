@@ -31,6 +31,15 @@ export default function MealBarcodeScanScreen() {
   const [isResolving, setIsResolving] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
 
+  const goBackSafely = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/meal/result');
+  };
+
   const handleLookup = async (barcode: string) => {
     try {
       setError(null);
@@ -40,13 +49,13 @@ export default function MealBarcodeScanScreen() {
 
       if (typeof draftIndex === 'string' && Number.isFinite(Number(draftIndex))) {
         updateDraftItem(Number(draftIndex), scannedItem);
-        router.back();
+        goBackSafely();
         return;
       }
 
       if (typeof targetKey === 'string' && targetKey.trim()) {
         setPendingScannedItem(targetKey, scannedItem);
-        router.back();
+        goBackSafely();
         return;
       }
 
@@ -73,7 +82,7 @@ export default function MealBarcodeScanScreen() {
   if (!profile?.is_premium) {
     return (
       <ScreenContainer>
-        <AppHeader showBackButton subtitle="Barcode scannen is alleen beschikbaar in premium." title="Product scannen" />
+        <AppHeader backHref="/meal/result" showBackButton subtitle="Barcode scannen is alleen beschikbaar in premium." title="Product scannen" />
         <InlineMessage
           actionLabel="Premium activeren"
           description={premiumLaunchPlan.description}
@@ -88,6 +97,7 @@ export default function MealBarcodeScanScreen() {
   return (
     <ScreenContainer>
       <AppHeader
+        backHref="/meal/result"
         showBackButton
         subtitle="Scan de streepjescode van een verpakking of vul hem handmatig in."
         title="Product scannen"

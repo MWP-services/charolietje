@@ -10,6 +10,8 @@ import type { MealClarificationQuestion } from '@/types/meal';
 type ClarificationCardProps = {
   question: MealClarificationQuestion;
   isLoading?: boolean;
+  initialSelectedOptionIds?: string[];
+  confirmLabel?: string;
   onConfirm: (selectedOptionIds: string[]) => void;
   onSkip: () => void;
 };
@@ -23,12 +25,12 @@ const helperCopy: Record<MealClarificationQuestion['type'], string> = {
   source_context: 'Herkomst helpt bij een betere standaardinschatting voor portie en extra\'s.',
 };
 
-export const ClarificationCard = ({ question, isLoading, onConfirm, onSkip }: ClarificationCardProps) => {
+export const ClarificationCard = ({ question, isLoading, initialSelectedOptionIds, confirmLabel, onConfirm, onSkip }: ClarificationCardProps) => {
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setSelectedOptionIds([]);
-  }, [question.id]);
+    setSelectedOptionIds(initialSelectedOptionIds ?? []);
+  }, [initialSelectedOptionIds, question.id]);
 
   return (
     <Card style={{ gap: 14 }}>
@@ -71,7 +73,7 @@ export const ClarificationCard = ({ question, isLoading, onConfirm, onSkip }: Cl
 
       <PrimaryButton
         disabled={!selectedOptionIds.length}
-        label="Werk inschatting bij"
+        label={confirmLabel ?? 'Werk inschatting bij'}
         loading={isLoading}
         onPress={() => onConfirm(selectedOptionIds)}
       />
