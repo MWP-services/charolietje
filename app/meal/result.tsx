@@ -18,7 +18,6 @@ import { NutritionRow } from '@/components/meal/NutritionRow';
 import { colors } from '@/constants/colors';
 import { useAuthStore } from '@/store/authStore';
 import { useMealStore } from '@/store/mealStore';
-import { useProfileStore } from '@/store/profileStore';
 import { getQuickEditPresets, getQuickEditStep } from '@/utils/mealEditing';
 import { formatMealType } from '@/utils/formatting';
 import { getMissingNutritionLabels, hasCompleteNutrition, scaleItemNutritionToQuantity } from '@/utils/nutrition';
@@ -26,7 +25,6 @@ import { getMissingNutritionLabels, hasCompleteNutrition, scaleItemNutritionToQu
 export default function MealAnalysisResultScreen() {
   const router = useRouter();
   const session = useAuthStore((state) => state.session);
-  const profile = useProfileStore((state) => state.profile);
   const draftAnalysis = useMealStore((state) => state.draftAnalysis);
   const saveDraft = useMealStore((state) => state.saveDraft);
   const updateDraftItem = useMealStore((state) => state.updateDraftItem);
@@ -73,18 +71,6 @@ export default function MealAnalysisResultScreen() {
     const step = getQuickEditStep(item.unit);
     const nextQuantity = Math.max(step < 1 ? 0.5 : 1, Math.round((item.quantity + direction * step) * 10) / 10);
     updatePortion(index, nextQuantity);
-  };
-
-  const openBarcodeScanner = (index: number) => {
-    if (!profile?.is_premium) {
-      router.push('/premium/activate');
-      return;
-    }
-
-    router.push({
-      pathname: '/meal/barcode-scan',
-      params: { draftIndex: String(index) },
-    });
   };
 
   const onSave = async () => {
@@ -254,7 +240,7 @@ export default function MealAnalysisResultScreen() {
                     <InlineMessage
                       description={
                         hasCompleteNutrition(item)
-                          ? 'Pas hoeveelheid, barcode of losse voedingswaardes aan als de schatting net niet klopt.'
+                          ? 'Pas hoeveelheid of losse voedingswaardes aan als de schatting net niet klopt.'
                           : 'We vonden hier nog geen betrouwbare voedingswaarde voor. Vul hem hieronder aan om op te slaan.'
                       }
                       title={hasCompleteNutrition(item) ? `Fijnslijpen voor ${item.name}` : `Nog aan te vullen voor ${item.name}`}
@@ -274,10 +260,6 @@ export default function MealAnalysisResultScreen() {
                         <FormField autoCapitalize="none" label="Eenheid" onChangeText={(value) => updatePortion(index, item.quantity, value)} value={item.unit} />
                       </View>
                     </View>
-                    <SecondaryButton
-                      label={profile?.is_premium ? 'Barcode scannen voor dit item' : 'Barcode scannen is premium'}
-                      onPress={() => openBarcodeScanner(index)}
-                    />
                     <NutritionInputs
                       onChange={(key, value) =>
                         updateDraftItem(index, {

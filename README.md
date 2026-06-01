@@ -9,7 +9,7 @@ This project is structured like a production-ready mobile app rather than a demo
 - Expo + Expo Router + TypeScript
 - Supabase-ready authentication and data layer
 - Mock AI transcription, meal parsing, and coaching services
-- Hybrid nutrition lookup with Open Food Facts, USDA fallback, and local safety fallback
+- AI-only nutrition estimates through a Supabase Edge Function
 - Clean reusable component architecture
 - Zustand stores for auth, profile, and meal flow state
 - Seeded demo data so the app feels complete in development mode
@@ -30,7 +30,7 @@ The app runs in two modes:
 - Real OpenAI meal parsing path via Supabase Edge Function when configured
 - Quick-add typed meal path alongside voice logging
 - Editable transcription before analysis
-- Hybrid nutrition enrichment with Open Food Facts, USDA fallback, and local safety fallback
+- AI-only nutrition enrichment via OpenAI when Supabase is configured
 - Daily totals for calories, protein, carbs, fat, fiber, sugar, and sodium
 - Meal detail, day detail, edit meal, delete meal
 - Premium coaching screen with goal-aware recommendations and a launch plan that can be activated in-app
@@ -174,7 +174,7 @@ supabase functions deploy lookup-nutrition --no-verify-jwt
 supabase secrets set OPENAI_API_KEY=your_openai_key
 supabase secrets set OPENAI_AUDIO_MODEL=gpt-4o-mini-transcribe
 supabase secrets set OPENAI_MEAL_PARSER_MODEL=gpt-4o-mini
-supabase secrets set USDA_API_KEY=your_usda_api_key
+supabase secrets set OPENAI_NUTRITION_MODEL=gpt-4o-mini
 ```
 
 7. Restart Expo after changing environment variables.
@@ -232,7 +232,7 @@ Real meal parsing is routed like this:
 1. The app sends reviewed meal text to `supabase/functions/v1/parse-meal`
 2. The Edge Function calls OpenAI with structured JSON output rules
 3. The app receives meal type plus parsed food items and estimated quantities
-4. Nutrition matching is requested from the `lookup-nutrition` Edge Function
+4. Nutrition estimates are requested from the `lookup-nutrition` Edge Function
 
 Relevant files:
 
@@ -240,25 +240,23 @@ Relevant files:
 - `services/ai/aiService.ts`
 - `supabase/functions/parse-meal/index.ts`
 
-## Hybrid nutrition lookup setup
+## AI nutrition estimate setup
 
 Nutrition is now routed like this:
 
 1. The app sends parsed meal items to `supabase/functions/v1/lookup-nutrition`
-2. The Edge Function tries `Open Food Facts` first for branded and European product matches
-3. If nothing useful is found and `USDA_API_KEY` is configured, it tries `USDA FoodData Central`
-4. If neither provider returns a usable match, the app falls back to the built-in local nutrition matcher so the user flow keeps working
+2. The Edge Function asks OpenAI for total nutrients for the requested quantity
+3. The app stores every returned nutrition item as an AI estimate
 
 Relevant files:
 
 - `services/nutrition/nutritionService.ts`
 - `supabase/functions/lookup-nutrition/index.ts`
-- `constants/mockNutritionDatabase.ts`
 
 Notes:
 
-- `Open Food Facts` does not require an API key for read lookups in this setup
-- `USDA FoodData Central` requires `USDA_API_KEY` as a Supabase secret
+- `OPENAI_API_KEY` is required on Supabase for nutrition estimates
+- `OPENAI_NUTRITION_MODEL` can override the meal parser model for nutrition
 - For production scale, add caching and rate limiting around `lookup-nutrition`
 
 ## SQL schema example
@@ -294,8 +292,7 @@ These files are intentionally separated so real APIs can be introduced cleanly:
   - Mock transcription still runs automatically when Supabase is not configured
   - Mock parsing still runs automatically when Supabase is not configured
 - `services/nutrition/nutritionService.ts`
-  - Hybrid nutrition lookup now uses Open Food Facts plus USDA via Supabase Edge Function
-  - Local matching remains as resilient fallback if providers fail or return nothing
+  - Nutrition lookup now uses AI estimates via Supabase Edge Function
 - `services/premium/premiumAdviceService.ts`
   - Replace mock coaching with an LLM-backed advice endpoint
 
@@ -309,14 +306,14 @@ Relevant TODO comments are already placed in those files.
 - Add retry queues and offline sync strategy
 - Add real subscription billing for premium after the temporary EUR 0 launch plan ends
 - Add Apple Health and Google Fit integrations
-- Add barcode scanning and meal photo recognition
+- Add meal photo recognition
 - Add analytics, crash reporting, and feature flags
 - Add automated tests for repositories, services, and route guards
 
 ## Suggested next steps
 
 1. Finalize store assets such as the branded icon, splash, and screenshots.
-2. Add caching and rate limiting around the new hybrid nutrition provider.
+2. Add caching and rate limiting around the AI nutrition provider.
 3. Move premium advice generation to a backend service.
 4. Add real subscription entitlements.
 5. Add production analytics, crash reporting, and moderation-safe API monitoring.
@@ -325,7 +322,7 @@ Relevant TODO comments are already placed in those files.
 
 - Audio recording is real, and transcription can use the Supabase Edge Function + OpenAI path when configured
 - Meal parsing can use the Supabase Edge Function + OpenAI path when configured
-- Nutrition lookup now uses Open Food Facts, USDA fallback, and local fallback matching
+- Nutrition lookup now uses OpenAI estimates through the Supabase Edge Function
 - Supabase integration is real when environment variables are configured
 - In mock mode the app seeds realistic meals so dashboard and history feel complete immediately
 

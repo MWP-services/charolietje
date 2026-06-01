@@ -14,15 +14,12 @@ type MealState = {
   error: string | null;
   draftText: string;
   draftAnalysis: AnalyzedMeal | null;
-  pendingScannedItem: { targetKey: string; item: AnalyzedMealItem } | null;
   lastSavedMealId: string | null;
   clearError: () => void;
   clearMeals: () => void;
   loadMeals: (userId: string) => Promise<MealWithItems[]>;
   setDraftText: (text: string) => void;
   setDraftAnalysis: (analysis: AnalyzedMeal, draftText?: string) => void;
-  setPendingScannedItem: (targetKey: string, item: AnalyzedMealItem) => void;
-  consumePendingScannedItem: (targetKey: string) => AnalyzedMealItem | null;
   analyzeDraft: (userId?: string | null) => Promise<AnalyzedMeal>;
   updateDraftItem: (index: number, updates: Partial<AnalyzedMealItem>) => void;
   duplicateDraftItem: (index: number) => void;
@@ -43,7 +40,6 @@ export const useMealStore = create<MealState>((set, get) => ({
   error: null,
   draftText: '',
   draftAnalysis: null,
-  pendingScannedItem: null,
   lastSavedMealId: null,
   async loadMeals(userId) {
     set({ isLoading: true, error: null });
@@ -58,7 +54,7 @@ export const useMealStore = create<MealState>((set, get) => ({
     }
   },
   setDraftText(text) {
-    set({ draftText: text, draftAnalysis: null, pendingScannedItem: null, error: null });
+    set({ draftText: text, draftAnalysis: null, error: null });
   },
   setDraftAnalysis(analysis, draftText) {
     set({
@@ -66,18 +62,6 @@ export const useMealStore = create<MealState>((set, get) => ({
       draftText: draftText ?? analysis.originalText,
       error: null,
     });
-  },
-  setPendingScannedItem(targetKey, item) {
-    set({ pendingScannedItem: { targetKey, item } });
-  },
-  consumePendingScannedItem(targetKey) {
-    const pendingItem = get().pendingScannedItem;
-    if (!pendingItem || pendingItem.targetKey !== targetKey) {
-      return null;
-    }
-
-    set({ pendingScannedItem: null });
-    return pendingItem.item;
   },
   async analyzeDraft(userId) {
     const text = get().draftText.trim();
@@ -129,7 +113,7 @@ export const useMealStore = create<MealState>((set, get) => ({
           clarificationOptions: [],
           derivedFromClarification: false,
           parentItemName: null,
-          nutritionSource: sourceItem.nutritionSource === 'matched' ? 'manual' : sourceItem.nutritionSource,
+          nutritionSource: sourceItem.nutritionSource,
         },
         ...state.draftAnalysis.items.slice(index + 1),
       ];
@@ -209,7 +193,7 @@ export const useMealStore = create<MealState>((set, get) => ({
     }
   },
   clearDraft() {
-    set({ draftText: '', draftAnalysis: null, pendingScannedItem: null, error: null, lastSavedMealId: null });
+    set({ draftText: '', draftAnalysis: null, error: null, lastSavedMealId: null });
   },
   clearError() {
     set({ error: null });
@@ -223,7 +207,6 @@ export const useMealStore = create<MealState>((set, get) => ({
       error: null,
       draftText: '',
       draftAnalysis: null,
-      pendingScannedItem: null,
       lastSavedMealId: null,
     });
   },
@@ -247,7 +230,6 @@ export const useMealStore = create<MealState>((set, get) => ({
         isSaving: false,
         draftText: '',
         draftAnalysis: null,
-        pendingScannedItem: null,
         lastSavedMealId: meal.id,
       });
       return meal;

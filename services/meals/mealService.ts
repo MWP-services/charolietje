@@ -4,7 +4,6 @@ import { createId, createUuid } from '@/utils/id';
 import { toMealTotalsRecord } from '@/utils/nutrition';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { mealCorrectionService } from '@/services/meals/mealCorrectionService';
-import { nutritionReferenceService } from '@/services/nutrition/nutritionReferenceService';
 
 export const mealService = {
   listMeals: mealRepository.listMeals,
@@ -34,15 +33,12 @@ export const mealService = {
 
     const savedMeal = await mealRepository.saveMeal(meal);
     await mealCorrectionService.recordCorrectionSignal(userId, savedMeal.id, analysis);
-    await nutritionReferenceService.learnReferencesFromItems(userId, items);
     return savedMeal;
   },
   async updateMeal(meal: MealWithItems) {
-    const savedMeal = await mealRepository.saveMeal({
+    return mealRepository.saveMeal({
       ...meal,
       updated_at: new Date().toISOString(),
     });
-    await nutritionReferenceService.learnReferencesFromItems(meal.user_id, meal.items);
-    return savedMeal;
   },
 };

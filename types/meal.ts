@@ -1,7 +1,7 @@
 import type { Nutrients, OptionalNutrients } from '@/types/nutrition';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'unknown';
-export type MealNutritionSource = 'matched' | 'manual' | 'unresolved' | 'estimated';
+export type MealNutritionSource = 'manual' | 'unresolved' | 'estimated';
 export type ClarificationType = 'meal_size' | 'portion_size' | 'quantity' | 'preparation_method' | 'hidden_calories' | 'source_context';
 export type ClarificationSelectionMode = 'single' | 'multiple';
 export type MealPreparationMethod = 'grilled' | 'pan_fried' | 'sauce' | 'fried' | 'oven_baked' | 'boiled' | 'raw';

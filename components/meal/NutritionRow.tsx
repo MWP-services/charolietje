@@ -15,10 +15,6 @@ const getStatusMeta = (item: AnalyzedMealItem) => {
     return { label: 'Aangepast', tone: 'primary' as const };
   }
 
-  if (item.nutritionSource === 'estimated') {
-    return { label: 'AI-inschatting', tone: 'warning' as const };
-  }
-
   if (item.needsClarification) {
     return { label: 'Even nalopen', tone: 'warning' as const };
   }
